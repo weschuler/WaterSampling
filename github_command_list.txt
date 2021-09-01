@@ -13,4 +13,4 @@ git commit -m "(committed message)" filename
 5. To push the new git to the online repository:
 git push -u origin main
 
-git remote add origin master (url)
+
