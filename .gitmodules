@@ -1,0 +1,3 @@
+[submodule "ms5837-python"]
+	path = ms5837-python
+	url = https://github.com/usrl-uofsc/ms5837-python.git
