@@ -32,6 +32,8 @@ class SensorNode():
 
     # Sensor instance
     self.sensor = ms5837.MS5837_02BA()
+    self.UNITS_Pa = ms5837.UNITS_Pa
+    self.UNITS_Centigrade = ms5837.UNITS_Centigrade
 
     # Set fluid density to freshwater 
     self.sensor.setFluidDensity(ms5837.DENSITY_FRESHWATER)
@@ -48,8 +50,6 @@ class SensorNode():
     # Setup Publisher
     self.sensor_pub = rp.Publisher("/watersampling/depth_sensor", MS5837Stamped, queue_size = 1)
 
-    rp.spin()
-
     # Start publishing
     self.publish_sensor_data()
 
@@ -59,8 +59,8 @@ class SensorNode():
       if self.sensor.read():
         sensor_msg = MS5837Stamped()
         sensor_msg.header.stamp = rp.Time.now()
-        sensor_msg.pressure = self.sensor.pressure(ms5837.UNITS_Pa)
-        sensor_msg.temperature = self.sensor.temperature(ms5837.UNITS_Centigrade)
+        sensor_msg.pressure = self.sensor.pressure(self.UNITS_Pa)
+        sensor_msg.temperature = self.sensor.temperature(self.UNITS_Centigrade)
         sensor_msg.depth = self.sensor.depth()
 
         self.sensor_pub.publish(sensor_msg)
