@@ -10,9 +10,9 @@ class Pump:
         
         
     def start(self):
-        GPIO.output(self.pin,True)
+        GPIO.output(self.pin, True)
         self.isrunning = 1
         
     def stop(self):
-        GPIO.output(self.pin,False)
+        GPIO.output(self.pin, False)
         self.isrunning = 0
