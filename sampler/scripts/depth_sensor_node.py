@@ -5,7 +5,7 @@ import rospy as rp
 
 from watersampling_msgs.msg import MS5837Stamped
 
-class SensorNode():
+class DepthSensorNode():
   """
   A ROS node for the ms5837 pressure and temperature sensor
 
@@ -15,7 +15,7 @@ class SensorNode():
   """
 
   def __init__(self, rate):
-    rp.init_node("ms5837_node")
+    rp.init_node("depth_sensor_node")
     self.rate = rate
 
     # A convoluted way to get to the ms5837-python directory
@@ -70,4 +70,5 @@ class SensorNode():
 
       r.sleep()
 
-SensorNode(20)
+if __name__ == '__main__':
+  DepthSensorNode(20)

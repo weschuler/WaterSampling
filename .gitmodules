@@ -1,3 +1,6 @@
 [submodule "ms5837-python"]
 	path = ms5837-python
 	url = https://github.com/usrl-uofsc/ms5837-python.git
+[submodule "Raspberry-Pi-sample-code"]
+	path = Raspberry-Pi-sample-code
+	url = https://github.com/usrl-uofsc/Raspberry-Pi-sample-code.git
