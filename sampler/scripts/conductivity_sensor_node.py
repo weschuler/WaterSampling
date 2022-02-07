@@ -27,9 +27,9 @@ class ConductivitySensorNode():
       if self.sensor.read():
         sensor_msg = ConductivityStamped()
         sensor_msg.header.stamp = rp.Time.now()
-        sensor_msg.conductivity = self.sensor.conductivity()
-        sensor_msg.total_dissolved_solids = self.sensor.totalDissolvedSolids()
-        sensor_msg.salinity = self.sensor.salinity()
+        sensor_msg.conductivity.data = self.sensor.conductivity()
+        sensor_msg.total_dissolved_solids.data = self.sensor.totalDissolvedSolids()
+        sensor_msg.salinity.data = self.sensor.salinity()
 
         self.sensor_pub.publish(sensor_msg)
 

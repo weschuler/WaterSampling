@@ -75,7 +75,7 @@ class ConductivitySensor():
       values = response_parts[-1].split(',')
       self.EC_meas = float(values[0])
       self.TDS_meas = int(values[1])
-      self.S_meas = float(values[2])
+      self.S_meas = float(values[2].rstrip('\x00'))
 
       return True
     elif response_parts[0] == 'Fail':
