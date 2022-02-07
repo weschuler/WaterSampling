@@ -59,9 +59,9 @@ class DepthSensorNode():
       if self.sensor.read():
         sensor_msg = MS5837Stamped()
         sensor_msg.header.stamp = rp.Time.now()
-        sensor_msg.pressure = self.sensor.pressure(self.UNITS_Pa)
-        sensor_msg.temperature = self.sensor.temperature(self.UNITS_Centigrade)
-        sensor_msg.depth = self.sensor.depth()
+        sensor_msg.pressure.data = self.sensor.pressure(self.UNITS_Pa)
+        sensor_msg.temperature.data = self.sensor.temperature(self.UNITS_Centigrade)
+        sensor_msg.depth.data = self.sensor.depth()
 
         self.sensor_pub.publish(sensor_msg)
 
