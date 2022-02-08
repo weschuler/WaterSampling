@@ -18,6 +18,7 @@ add_message_files(DIRECTORY msg
   FILES
   MS5837Stamped.msg
   ConductivityStamped.msg
+  PumpInfo.msg
 )
 
 ## Generate added messages and services with any dependencies listed here

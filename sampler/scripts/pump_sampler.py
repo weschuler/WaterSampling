@@ -1,7 +1,7 @@
 import RPi.GPIO as GPIO
 from time import sleep
 
-from pump import Pump
+from sampler.scripts.pump_driver import Pump
 
 trigger_pin = 40
 mastersampler = Pump(35)              # broadcom pin 19 (35), 16 (36), 26 (37), 20 (38) are being used, the pins in the brackets are physical pins 
