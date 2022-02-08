@@ -1,11 +1,15 @@
 import os
+import rospy as rp
 
-cwd = os.getcwd()
+
+cwd = rp.get_param('/conductivity_sensor_node/source_directory')
 cwd_path = cwd.split('/')
 path_to_atlasi2c = ''
-for i in range(len(cwd_path) - 2):
+for i in range(len(cwd_path) - 1):
   path_to_atlasi2c += cwd_path[i] + '/'
 path_to_atlasi2c += 'Raspberry-Pi-sample-code'
+
+print(path_to_atlasi2c)
 
 import sys
 sys.path.append(path_to_atlasi2c)
