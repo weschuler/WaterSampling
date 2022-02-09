@@ -13,13 +13,15 @@ class SamplerNode():
     A ROS node that monitors the water sensors and triggers the sampling
     """
 
-    _RC_TRIGGER_CHANNEL = 4
-    _RC_HIGH = 2006
+    _RC_TRIGGER_CHANNEL_MAIN = 10    #check the /mavros/rc/in topic to find out which switch controls which channel
+    _RC_HIGH_MAIN = 1494
+    _RC_TRIGGER_CHANNEL_SamplerC = 12    #check the /mavros/rc/in topic to find out which switch controls which channel
+    _RC_HIGH_SamplerC = 1494
 
-    _MASTER_PUMP_PIN = 35
-    _SAMPLING_PUMP_A = 36
-    _SAMPLING_PUMP_B = 37
-    _SAMPLING_PUMP_C = 38
+    _MASTER_PUMP_PIN = 38
+    _SAMPLING_PUMP_A = 37
+    _SAMPLING_PUMP_B = 36
+    _SAMPLING_PUMP_C = 35
 
     def __init__(self, rate):
         rp.init_node("water_sampler_node")
@@ -31,7 +33,8 @@ class SamplerNode():
         self.sampling_pump_b = Pump(self._SAMPLING_PUMP_B)
         self.sampling_pump_c = Pump(self._SAMPLING_PUMP_C)
 
-        self.enable_sampler = False
+        self.enable_sampler_main = False
+        self.enable_sampler_C = False
         self.inlet_depth = 0.0
 
         # ROS Subscribers
@@ -50,17 +53,37 @@ class SamplerNode():
         rp.spin()
 
     def rcCallback(self, msg):
-        if msg.channels[self._RC_TRIGGER_CHANNEL] == self._RC_HIGH:
-            self.enable_sampler = True
+        #print(msg.channels[self._RC_TRIGGER_CHANNEL])                          #for troubleshooting
+        
+        if msg.channels[self._RC_TRIGGER_CHANNEL_SamplerC] == self._RC_HIGH_SamplerC:
+            self.enable_sampler_C = True
         else:
-            self.enable_sampler = False
+            self.enable_sampler_C = False
+        
+        if msg.channels[self._RC_TRIGGER_CHANNEL_MAIN] == self._RC_HIGH_MAIN:
+            self.enable_sampler_main = True
+        else:
+            self.enable_sampler_main = False
 
     def depthSensorCallback(self, msg):
         self.inlet_depth = msg.depth.data
 
     def stateMachine(self,):
         # TODO: Check RC and sensors and control pumps
-        pass
+        if self.enable_sampler_main == True:
+            print(self.inlet_depth)
+            if self.inlet_depth >= 0.20:
+                self.master_pump.start()
+                if self.enable_sampler_C == True:
+                    self.sampling_pump_c.start()
+                else:
+                    self.sampling_pump_c.stop()
+            else:
+                self.master_pump.stop()
+                self.sampling_pump_c.stop()
+        else:
+            self.master_pump.stop()
+            self.sampling_pump_c.stop()
 
     def pumpInfoPublisher(self,):
         r = rp.Rate(self.rate)
