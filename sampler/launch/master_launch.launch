@@ -1,0 +1,6 @@
+<launch>
+    <include file="$(find sampler)/launch/px4.launch"/>
+    <include file="$(find sampler)/launch/conductivity_sensor.launch"/>
+    <include file="$(find sampler)/launch/depth_sensor.launch"/> 
+    <include file="$(find sampler)/launch/pump_sampler.launch"/> 
+</launch>

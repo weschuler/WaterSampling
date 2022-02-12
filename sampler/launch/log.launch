@@ -1,14 +1,10 @@
 <launch>
   <!-- Start recording the flight log data -->
   <node pkg="rosbag" type="record" name="flight_log_bagfile" output="screen"
-      args="record -o /flightData 
+      args="record -o /home/watersampling/bagfiles/watersampling
 
 /rosout
 /rosout_agg
-
-/watersampling/depth_sensor
-/watersampling/conductivity_sensor
-/watersampling/sampler_pump_info
 
 /mavros/battery
 /mavros/distance_sensor/hrlv_ez4_pub
@@ -21,6 +17,15 @@
 /mavros/local_position/pose
 /mavros/rc/in
 /mavros/state
+
+/watersampling/depth_sensor
+/watersampling/conductivity_sensor
+/watersampling/sampler_pump_info
+/ref_data
+/fluor_data
+/temp
+
+
 "
   />
 
