@@ -2,7 +2,7 @@ import os
 import rospy as rp
 
 
-cwd = rp.get_param('/conductivity_sensor_node/source_directory')
+cwd = rp.get_param('/conductivity_sensor_node/source_directory')  #source_directory is a variable that is defined in the launch file. It has the value of the directory of the "sampler" package
 cwd_path = cwd.split('/')
 path_to_atlasi2c = ''
 for i in range(len(cwd_path) - 1):

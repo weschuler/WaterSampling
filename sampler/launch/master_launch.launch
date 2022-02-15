@@ -3,4 +3,5 @@
     <include file="$(find sampler)/launch/conductivity_sensor.launch"/>
     <include file="$(find sampler)/launch/depth_sensor.launch"/> 
     <include file="$(find sampler)/launch/pump_sampler.launch"/> 
+    <include file="$(find sampler)/launch/log.launch"/> 
 </launch>

@@ -19,7 +19,7 @@ class DepthSensorNode():
     self.rate = rate
 
     # A convoluted way to get to the ms5837-python directory
-    cwd = rp.get_param('/depth_sensor_node/source_directory')
+    cwd = rp.get_param('/depth_sensor_node/source_directory')   #source_directory is a variable that is defined in the launch file. It has the value of the directory of the "sampler" package
     cwd_path = cwd.split('/')
     path_to_ms5837 = ''
     for i in range(len(cwd_path) - 1):
