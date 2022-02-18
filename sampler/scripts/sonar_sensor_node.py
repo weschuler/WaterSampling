@@ -59,6 +59,7 @@ try :
             #print('out of range')
             continue
         distance = round(distance, 3)
+        distance = distance -34.0
         #print ('Distance : %f cm'%distance)
         sensor.dist_sendor(distance)
         
