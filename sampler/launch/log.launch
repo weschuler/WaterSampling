@@ -1,7 +1,7 @@
 <launch>
   <!-- Start recording the flight log data -->
   <node pkg="rosbag" type="record" name="flight_log_bagfile" output="screen"
-      args="record -o /home/watersampling/Desktop/Github_Repository/WaterSampling/Flight_logs/watersampling
+      args="record -o $(find sampler)/flight_logs/watersampling
 
 /rosout
 /rosout_agg
@@ -24,6 +24,7 @@
 /ref_data
 /fluor_data
 /temp
+/vrpn_client_node/watersampling/pose
 
 
 "
