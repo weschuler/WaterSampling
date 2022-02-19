@@ -21,10 +21,10 @@ class SamplerNode():
     _RC_TRIGGER_CHANNEL_SamplerA = 6        # 1851 - 1494 -1136
     _RC_HIGH_SamplerA = 1494
 
-    _MASTER_PUMP_PIN = 38
-    _SAMPLING_PUMP_A = 37
-    _SAMPLING_PUMP_B = 36
-    _SAMPLING_PUMP_C = 35
+    _MASTER_PUMP_PIN = 20   #BCM pin 20, BOARD pin 38
+    _SAMPLING_PUMP_A = 26   #BCM pin 26, BOARD pin 37
+    _SAMPLING_PUMP_B = 16   #BCM pin 16, BOARD pin 36
+    _SAMPLING_PUMP_C = 19   #BCM pin 19, BOARD pin 35
 
     def __init__(self, rate):
         rp.init_node("water_sampler_node")

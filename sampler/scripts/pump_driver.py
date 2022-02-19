@@ -7,7 +7,7 @@ class Pump:
     def __init__(self, pin):
         self.pin = pin
         self.__isrunning = False
-        GPIO.setmode(GPIO.BOARD)
+        GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)
         GPIO.setup(self.pin, GPIO.OUT)
 

@@ -24,12 +24,12 @@ class sonar():
         self.distance_publisher.publish(data)
         
         
-gpio.setmode(gpio.BOARD)
+gpio.setmode(gpio.BCM)
 gpio.setwarnings(False)
 #trig = 27 # 7th
 #echo = 17 # 6th
 
-trig = 32
+trig = 12    #BCM pin 12, BOARD pin 32
 
 #gpio.setup(trig, gpio.OUT)
 #gpio.setup(echo, gpio.IN)
