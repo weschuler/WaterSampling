@@ -71,4 +71,4 @@ class DepthSensorNode():
       r.sleep()
 
 if __name__ == '__main__':
-  DepthSensorNode(20)
+  DepthSensorNode(5)

@@ -21,9 +21,10 @@
 /watersampling/depth_sensor
 /watersampling/conductivity_sensor
 /watersampling/sampler_pump_info
-/ref_data
-/fluor_data
-/temp
+/watersampling/sonar_dist
+/sensor/ref
+/sensor/fluor
+/sensor/temp
 /vrpn_client_node/watersampling/pose
 
 
