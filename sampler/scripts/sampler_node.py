@@ -45,7 +45,7 @@ class SamplerNode():
         self.enable_sampler_B = False
         self.enable_sampler_A = False
         self.inlet_depth = 0.0
-        self.sampling_depth = 0.1
+        self.sampling_depth = 0.2
         self.fluor_mean = 0
 
         # Fluorescence sensor
@@ -164,8 +164,8 @@ class SamplerNode():
             pump_msg.sampling_pump_c.data = self.sampling_pump_c.isrunning
 
             self.pump_info_pub.publish(pump_msg)
-        
-        r.sleep()
+            
+            r.sleep()
 
 
 if __name__ == '__main__':
