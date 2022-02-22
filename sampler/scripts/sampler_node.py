@@ -2,8 +2,11 @@
 import rospy as rp
 import threading
 
+from statistics import mean, median
+
 from pump_driver import Pump
 
+from std_msgs.msg import Int32
 from mavros_msgs.msg import RCIn
 from watersampling_msgs.msg import MS5837Stamped, PumpInfo
 
@@ -42,11 +45,17 @@ class SamplerNode():
         self.enable_sampler_A = False
         self.inlet_depth = 0.0
 
+        # Fluorescence sensor
+        self.fluorescence_readings = []
+        self.fluorescence_list_size = 10
+
         # ROS Subscribers
         self.rc_sub = rp.Subscriber(
             '/mavros/rc/in', RCIn, self.rcCallback, queue_size=1)
         self.depth_sensor_sub = rp.Subscriber(
             '/watersampling/depth_sensor', MS5837Stamped, self.depthSensorCallback, queue_size=1)
+        self.fluor_sensor_sub = rp.Subscriber(
+            '/sensor/fluor', Int32, self.fluorSensorCallback, queue_size=1)
 
         # ROS Publisher
         self.pump_info_pub = rp.Publisher(
@@ -83,7 +92,16 @@ class SamplerNode():
     def depthSensorCallback(self, msg):
         self.inlet_depth = msg.depth.data
 
+    def fluorSensorCallback(self, msg):
+        self.fluorescence_readings.append(msg.data)
+        while len(self.fluorescence_readings) > self.fluorescence_list_size:
+            self.fluorescence_readings.pop(0)
+
     def stateMachine(self,):
+        # To check that there ia at least one fluorescence reading use len(self.fluorescence_readings) > 0
+        # To get last fluorescence reading use self.fluorescence_readings[-1]
+        # To get window average use mean(self.fluorescence_readings)
+        # To get window median use median(self.fluorescence_readings)
         # TODO: Check RC and sensors and control pumps
         if self.enable_sampler_main == True:
             #print(self.inlet_depth)
