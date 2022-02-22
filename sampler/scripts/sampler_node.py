@@ -39,11 +39,14 @@ class SamplerNode():
         self.sampling_pump_b = Pump(self._SAMPLING_PUMP_B)
         self.sampling_pump_c = Pump(self._SAMPLING_PUMP_C)
 
+        self.sampling_flag = False
         self.enable_sampler_main = False
         self.enable_sampler_C = False
         self.enable_sampler_B = False
         self.enable_sampler_A = False
         self.inlet_depth = 0.0
+        self.sampling_depth = 0.1
+        self.fluor_mean = 0
 
         # Fluorescence sensor
         self.fluorescence_readings = []
@@ -103,31 +106,44 @@ class SamplerNode():
         # To get window average use mean(self.fluorescence_readings)
         # To get window median use median(self.fluorescence_readings)
         # TODO: Check RC and sensors and control pumps
+        
+        if(len(self.fluorescence_readings) > 0):
+            self.fluor_mean = mean(self.fluorescence_readings)
+            #print(self.fluor_mean)
+        else:
+            self.fluor_mean = 0
+        
         if self.enable_sampler_main == True:
-            #print(self.inlet_depth)
-            if self.inlet_depth >= 0.01:
+            if self.inlet_depth >= self.sampling_depth:
                 self.master_pump.start()
+                self.sampling_pump_c.start()
+                
+                if(self.fluor_mean > 1000):
+                    self.sampling_flag = True
+                
                 #Sampler A
-                if self.enable_sampler_A == True:
+                if self.sampling_flag == True or self.enable_sampler_A == True:
                     self.sampling_pump_a.start()
                 else:
                     self.sampling_pump_a.stop()
-                #Sampler B
+                #Sampler B will help out the master_pump for now. Later we can add an extra pump or a more powerful pump in parallel. 
                 if self.enable_sampler_B == True:
                     self.sampling_pump_b.start()
                 else:
                     self.sampling_pump_b.stop()
-                #Sampler C    
-                if self.enable_sampler_C == True:
-                    self.sampling_pump_c.start()
-                else:
-                    self.sampling_pump_c.stop()
+                #Sampler C
+        #        if self.enable_sampler_C == True:
+        #            self.sampling_pump_c.start()
+        #        else:
+        #            self.sampling_pump_c.stop()
             else:
+                self.sampling_flag = False
                 self.master_pump.stop()
                 self.sampling_pump_a.stop()
                 self.sampling_pump_b.stop()
                 self.sampling_pump_c.stop()
         else:
+            self.sampling_flag = False
             self.master_pump.stop()
             self.sampling_pump_a.stop()
             self.sampling_pump_b.stop()
@@ -148,7 +164,7 @@ class SamplerNode():
             pump_msg.sampling_pump_c.data = self.sampling_pump_c.isrunning
 
             self.pump_info_pub.publish(pump_msg)
-
+        
         r.sleep()
 
 

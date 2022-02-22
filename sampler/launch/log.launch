@@ -1,7 +1,7 @@
 <launch>
   <!-- Start recording the flight log data -->
   <node pkg="rosbag" type="record" name="flight_log_bagfile" output="screen"
-      args="record -o /home/usrl/flight_logs/watersampling
+      args="record -o $(find sampler)/flight_logs/watersampling
 
 /rosout
 /rosout_agg
