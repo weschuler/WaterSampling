@@ -114,7 +114,7 @@ class SamplerNode():
             self.fluor_mean = 0
         
         if self.enable_sampler_main == True:
-            if self.inlet_depth >= self.sampling_depth:
+            if self.inlet_depth >= self.sampling_depth or self.enable_sampler_C == True:   #self.enable_sampler_C is a RC switch which acts as a bypass when the depth sensor is not working
                 self.master_pump.start()
                 self.sampling_pump_c.start()
                 
