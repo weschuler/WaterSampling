@@ -122,7 +122,7 @@ class SamplerNode():
         if(len(self.fluorescence_readings) > 0):
             self.fluor_median = median(self.fluorescence_readings)
         else:
-            self.fluor_median = 1200
+            self.fluor_median = 1200                # Change this to zero when we get the fluoresensor back
         
         #%% Sampling---------------------------------------------------------------------
         
@@ -148,6 +148,7 @@ class SamplerNode():
                         self.sampler_A_is_full = True
                         self.sampling_start_time = 0.0
                         self.prev_runtime = 0.0
+                        rp.sleep(5)
                 
                 #Sampler B    
                 elif self.sampling_flag == True and self.sampler_B_is_full == False:
@@ -162,6 +163,7 @@ class SamplerNode():
                         self.sampler_B_is_full = True
                         self.sampling_start_time = 0.0
                         self.prev_runtime = 0.0
+                        rp.sleep(5)
                     
                 #Sampler C    
                 elif self.sampling_flag == True and self.sampler_C_is_full == False:
@@ -176,8 +178,9 @@ class SamplerNode():
                         self.sampler_C_is_full = True
                         self.sampling_start_time = 0.0
                         self.prev_runtime = 0.0
+                        rp.sleep(5)
                 
-                print(self.prev_runtime+rp.get_time()-self.sampling_start_time)
+                #print(self.prev_runtime+rp.get_time()-self.sampling_start_time)
                 
             else:
                 self.sampling_flag = False
