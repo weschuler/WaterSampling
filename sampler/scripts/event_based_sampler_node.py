@@ -7,6 +7,8 @@ from statistics import mean, median
 from pump_driver import Pump
 from bottle_state import Bottle
 
+from std_msgs.msg import Bool
+from std_msgs.msg import Int16
 from std_msgs.msg import Int32
 from mavros_msgs.msg import RCIn
 from watersampling_msgs.msg import MS5837Stamped, PumpInfo
@@ -58,10 +60,6 @@ class SamplerNode():
         self.enable_sampler_B = False
         self.enable_sampler_A = False
         
-        self.sampling_start_time = 0.0
-        self.sampling_duration = 15
-        self.prev_runtime = 0.0
-        
         self.inlet_depth = 0.0
         self.sampling_depth = 0.20
         self.fluor_median = 0
@@ -82,12 +80,19 @@ class SamplerNode():
         # ROS Publisher
         self.pump_info_pub = rp.Publisher(
             '/watersampling/sampler_pump_info', PumpInfo, queue_size=1)
+        self.mode_pub = rp.Publisher(
+            '/sensor/mode', Int16, queue_size=1)
 
         t = threading.Thread(target=self.pumpInfoPublisher)
         t.start()
 
         rp.spin()
-
+    
+    def mode_sendor(self, mode_number):
+        mode = Int16()
+        mode.data=mode_number
+        self.mode_pub.publish(mode)
+    
     def rcCallback(self, msg):
         
         if msg.channels[self._RC_TRIGGER_CHANNEL_SamplerA] == self._RC_HIGH_SamplerA:
@@ -125,10 +130,8 @@ class SamplerNode():
                 
                 #%% Check if there is water running in the circuit------------------------------
                 
-                # if main_channel.is_full == True: and then publish mode to /sensor/mode topic
-                #   rostopic pub /sensor/mode std_msgs/Int16 "data: 1 --once"
-                # else:
-                # continue
+                if self.main_channel.is_full == True:
+                    SamplerNode.mode_sendor(self, 1)                    # publishes mode = 1 to the /sensor/mode topic to start getting fluorescence measurements               
                 
                 #%% Calculate median of fluorescence window-------------------------------------
                 if(len(self.fluorescence_readings) > 0):
@@ -140,8 +143,7 @@ class SamplerNode():
                     self.sampling_flag = 1
                     
                 #%% Sampling--------------------------------------------------------------------
-                print("sampling flag: ",self.sampling_flag)
-                print("depth flag: ",self.depth_flag)
+                                             
                 #Sampler A
                 if self.sampling_flag == 1 and self.sampler_A.is_full == False:
                     self.enable_sampler_A = True                    
@@ -193,6 +195,7 @@ class SamplerNode():
             self.sampling_pump_a.stop()
             self.sampling_pump_b.stop()
             self.sampling_pump_c.stop()
+            SamplerNode.mode_sendor(self, 0)                    # publishes mode = 0 to the /sensor/mode topic to stop getting fluorescence measurements 
 
     def pumpInfoPublisher(self,):
         r = rp.Rate(self.rate)
