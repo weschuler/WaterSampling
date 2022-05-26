@@ -18,6 +18,9 @@
 /mavros/rc/in
 /mavros/state
 
+/mavros/altitude
+/vrpn_client_node/watersampling/pose
+
 /watersampling/depth_sensor
 /watersampling/conductivity_sensor
 /watersampling/sampler_pump_info

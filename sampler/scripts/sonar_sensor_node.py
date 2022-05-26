@@ -42,6 +42,7 @@ try :
         gpio.setup(trig, gpio.OUT)
         gpio.output(trig, 0)
         time.sleep(0.02)                    # The sonar sleeps for 20 miliseconds
+        #time.sleep(1)
         gpio.output(trig, 1)
         time.sleep(0.000005)                # The sonar sends out a pin for 5 microseconds
         gpio.output(trig, 0)
@@ -61,7 +62,8 @@ try :
             #print('out of range')
             continue
         distance = round(distance, 3)
-        distance = distance -0.34
+        #distance = distance -0.34
+        #distance = distance -0.037
         #print ('Distance : %f cm'%distance)
         sensor.dist_sendor(distance)
         
