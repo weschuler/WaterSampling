@@ -125,19 +125,19 @@ class SamplerNode():
 
     def stateMachine(self,):
         if self.enable_sampler_main == True:
-            if self.inlet_depth >= self.sampling_depth or self.enable_sampler_C == True:
+            if self.inlet_depth >= self.sampling_depth or self.enable_sampler_C == True:   #self.enable_sampler_C is the RC switch
                 self.master_pump.start()
                 
                 #%% Check if there is water running in the circuit------------------------------
                 
                 if self.main_channel.is_full == True:
-                    SamplerNode.mode_sendor(self, 1)                    # publishes mode = 1 to the /sensor/mode topic to start getting fluorescence measurements               
+                    SamplerNode.mode_sendor(self, 1)        # publishes mode = 1 to the /sensor/mode topic to start getting fluorescence measurements               
                 
                 #%% Calculate median of fluorescence window-------------------------------------
                 if(len(self.fluorescence_readings) > 0):
                     self.fluor_median = median(self.fluorescence_readings)
                 else:
-                    self.fluor_median = 1200                # Change this to zero when we the fluoresensor is connected to the Pi
+                    self.fluor_median = 0                # Change this to zero when we the fluoresensor is connected to the Pi
                 
                 if(self.sampling_flag == 0 and self.fluor_median > 1000):
                     self.sampling_flag = 1
