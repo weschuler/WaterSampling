@@ -8,6 +8,7 @@ from scipy.stats.distributions import chi2
 from nav_msgs.msg import Odometry
 from sensor_msgs import Imu
 from std_msgs.msg import Float32
+from watersampling_msgs.msg import EKFInfo
 
 
 class ExtendedKalmanFilter():
@@ -23,7 +24,9 @@ class ExtendedKalmanFilter():
             R  -> Measurement Noise Matrix
             
     """
-    def __init__(self):
+    def __init__(self, rate):
+        rp.init_node("EKF_node")
+        self.rate = rate
         # Initialize system constants
         self.r = 0.26            # = 260 mm, distance between 2 landing legs is 520 mm.
         self.dt = rp.get_time()          # The time step for the sonar sensor reading, the lowest frequency among all sensors
@@ -54,6 +57,15 @@ class ExtendedKalmanFilter():
             '/mavros/global_position/local', Odometry, self.positionCallback, queue_size=1)
         self.sonar_sensor_sub = rp.Subscriber(
             '/watersampling/sonar_dist', Float32, self.sonarCallback, queue_size=1)
+        
+        # ROS Publisher
+        self.EKF_info_pub = rp.Publisher(
+            '/watersampling/EKF_info', EKFInfo, queue_size=1)           #rp.Publisher('topic name', message_type, queue_size)
+        
+        rp.loginfo("EKF started")
+        
+        t = threading.Thread(target=self.EKFInfoPublisher)
+        t.start()
         
         rp.spin()
         
@@ -170,21 +182,21 @@ class ExtendedKalmanFilter():
         
         # Update the error covariance matrix
         fetchF_EKF(self.X_est_EKF,self.dt)
-        self.P_EKF = self.F*self.P_EKF*F.T + self.Q
+        self.P_EKF = self.F*self.P_EKF*self.F.T + self.Q
         
-        angles = quaternion_to_euler_angle(quat[0], quat[1], quat[2], quat[3])      # returns euler angles in XYZ format in radians
+        angles = quaternion_to_euler_angle(self.quat[0], self.quat[1], self.quat[2], self.quat[3])      # returns euler angles in XYZ format in radians
        
         # Get Measurements
     #   y[0, 0] = GPS Altitude
     #   y[1, 0] = sonar_sensor
-        y[2, 0] = angles[0]    # ROLL ANGLE IN RADIAN
-        y[3, 0] = angles[1]    # PITCH ANGLE IN RADIAN
+        self.y[2, 0] = angles[0]    # ROLL ANGLE IN RADIAN
+        self.y[3, 0] = angles[1]    # PITCH ANGLE IN RADIAN
         
         # Get expected measurement
-        y_exp[0, 0] = self.X_est_EKF[0, 0] + self.X_est_EKF[4, 0]
-        y_exp[1, 0] = (self.X_est_EKF[0, 0]+r*np.sin(self.X_est_EKF[2, 0])*np.cos(self.X_est_EKF[3, 0]))/(np.cos(self.X_est_EKF[2, 0])*np.cos(self.X_est_EKF[3, 0]))
-        y_exp[2, 0] = self.X_est_EKF[2, 0]
-        y_exp[3, 0] = self.X_est_EKF[3, 0]
+        self.y_exp[0, 0] = self.X_est_EKF[0, 0] + self.X_est_EKF[4, 0]
+        self.y_exp[1, 0] = (self.X_est_EKF[0, 0]+r*np.sin(self.X_est_EKF[2, 0])*np.cos(self.X_est_EKF[3, 0]))/(np.cos(self.X_est_EKF[2, 0])*np.cos(self.X_est_EKF[3, 0]))
+        self.y_exp[2, 0] = self.X_est_EKF[2, 0]
+        self.y_exp[3, 0] = self.X_est_EKF[3, 0]
         
         # Compute H Matrix
         fetchH_EKF(self.X_est_EKF)
@@ -205,12 +217,12 @@ class ExtendedKalmanFilter():
         # Sequential Kalman Filter
         # ---------------------------------------------------------------------
             
-        for i in range(y.shape[0]):
+        for i in range(self.y.shape[0]):
             # chi square test (Measurement gating)
-            Sigma_z = (self.H[i,:]*self.P_EKF*self.H[i,:].T+R[i,i])
+            Sigma_z = (self.H[i,:]*self.P_EKF*self.H[i,:].T+self.R[i,i])
             Innovation = self.y[i,0] - self.y_exp[i, 0]
             
-            if Innovation.T*(np.linalg.inv(Sigma_z))*Innovation > chi2.ppf(0.995, df=y.shape[0]):
+            if Innovation.T*(np.linalg.inv(Sigma_z))*Innovation > chi2.ppf(0.995, df=self.y.shape[0]):
                 continue
             
             # Kalman Gain Update
@@ -222,9 +234,25 @@ class ExtendedKalmanFilter():
             # Update Error covariance
             self.P_EKF = (np.matrix(np.eye(5)) - self.K*self.H[i,:])*self.P_EKF        
         # ---------------------------------------------------------------------
+    
+    def EKFInfoPublisher(self,):
+        r = rp.Rate(self.rate)
+        EKF_msg = EKFInfo()
 
+        while not rp.is_shutdown():
+            self.stateEstimate()
 
+            # Populate and publish pump message
+            EKF_msg.header.stamp = rp.Time.now()
+            EKF_msg.estimate.data = self.X_est_EKF[0, 0]
+            EKF_msg.time.data = self.dt
 
+            self.EKF_info_pub.publish(EKF_msg)
+            
+            r.sleep()
+
+if __name__ == '__main__':
+    ExtendedKalmanFilter(20)
 
 #%% All the functions are down below
 
