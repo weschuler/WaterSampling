@@ -27,15 +27,15 @@ class SamplerNode():
     _RC_TRIGGER_CHANNEL_SamplerA = 6        # 1851 - 1494 -1136
     _RC_HIGH_SamplerA = 1494
 
-    _MASTER_PUMP_PIN = 20   #BCM pin 20, BOARD pin 38
+    _MASTER_PUMP_PIN = 16   #BCM pin 16, BOARD pin 36
     _SAMPLING_PUMP_A = 26   #BCM pin 26, BOARD pin 37
-    _SAMPLING_PUMP_B = 16   #BCM pin 16, BOARD pin 36
+    _SAMPLING_PUMP_B = 20   #BCM pin 20, BOARD pin 38
     _SAMPLING_PUMP_C = 19   #BCM pin 19, BOARD pin 35
     
-    _MAIN_CHANNEL = 1       #BCM pin 1
+    _MAIN_CHANNEL = 8       #BCM pin 8
     _BOTTLE_A = 7           #BCM pin 7
-    _BOTTLE_B = 8           #BCM pin 8
-    _BOTTLE_C = 25          #BCM pin 25
+    _BOTTLE_B = 25          #BCM pin 25
+    _BOTTLE_C = 1           #BCM pin 1
 
     def __init__(self, rate):
         rp.init_node("water_sampler_node")
@@ -137,7 +137,7 @@ class SamplerNode():
                 if(len(self.fluorescence_readings) > 0):
                     self.fluor_median = median(self.fluorescence_readings)
                 else:
-                    self.fluor_median = 0                # Change this to zero when we the fluoresensor is connected to the Pi
+                    self.fluor_median = 1200                # Change this to zero when we the fluoresensor is connected to the Pi
                 
                 if(self.sampling_flag == 0 and self.fluor_median > 1000):
                     self.sampling_flag = 1
