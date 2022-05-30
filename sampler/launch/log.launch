@@ -25,9 +25,11 @@
 /watersampling/conductivity_sensor
 /watersampling/sampler_pump_info
 /watersampling/sonar_dist
+/watersampling/EKF_info
 /sensor/ref
 /sensor/fluor
 /sensor/temp
+
 
 
 "

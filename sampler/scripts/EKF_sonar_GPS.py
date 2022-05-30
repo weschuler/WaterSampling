@@ -252,7 +252,11 @@ class ExtendedKalmanFilter():
 
             # Populate and publish pump message
             EKF_msg.header.stamp = rp.Time.now()
-            EKF_msg.estimate.data = self.X_est_EKF[0, 0]
+            EKF_msg.estimate_z.data = self.X_est_EKF[0, 0]
+            EKF_msg.estimate_z_dot.data = self.X_est_EKF[1, 0]
+            EKF_msg.estimate_roll.data = self.X_est_EKF[2, 0]
+            EKF_msg.estimate_pitch.data = self.X_est_EKF[3, 0]
+            EKF_msg.estimate_bias.data = self.X_est_EKF[4, 0]
             EKF_msg.time.data = self.dt
 
             self.EKF_info_pub.publish(EKF_msg)

@@ -61,9 +61,10 @@ class SamplerNode():
         self.enable_sampler_A = False
         
         self.inlet_depth = 0.0
-        self.sampling_depth = 0.20
+        self.sampling_depth = 0.2
         self.fluor_median = 0
         self.depth_flag = 0
+        self.fluor_trigger = 100.0
 
         # Fluorescence sensor
         self.fluorescence_readings = []
@@ -137,9 +138,9 @@ class SamplerNode():
                 if(len(self.fluorescence_readings) > 0):
                     self.fluor_median = median(self.fluorescence_readings)
                 else:
-                    self.fluor_median = 1200                # Change this to zero when we the fluoresensor is connected to the Pi
+                    self.fluor_median = 0                # Change this to zero when we the fluoresensor is connected to the Pi
                 
-                if(self.sampling_flag == 0 and self.fluor_median > 1000):
+                if(self.sampling_flag == 0 and self.fluor_median > self.fluor_trigger):
                     self.sampling_flag = 1
                     
                 #%% Sampling--------------------------------------------------------------------
