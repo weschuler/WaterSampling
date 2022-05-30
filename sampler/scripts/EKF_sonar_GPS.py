@@ -6,22 +6,22 @@ import math
 from scipy.stats.distributions import chi2
 
 from nav_msgs.msg import Odometry
-from sensor_msgs import Imu
+from sensor_msgs.msg import Imu
 from std_msgs.msg import Float32
 from watersampling_msgs.msg import EKFInfo
 
 
 class ExtendedKalmanFilter():
-        """
-            Extended Kalman Filter
+    """
+        Extended Kalman Filter
 
-            n  -> Number of States
-            X  -> State
-            F  -> State Transition Matrix Discrete
-            H  -> Measurement Matrix Discrete
-            P  -> Error Covariance Matrix
-            Q  -> Process Noise Matrix
-            R  -> Measurement Noise Matrix
+        n  -> Number of States
+        X  -> State
+        F  -> State Transition Matrix Discrete
+        H  -> Measurement Matrix Discrete
+        P  -> Error Covariance Matrix
+        Q  -> Process Noise Matrix
+        R  -> Measurement Noise Matrix
             
     """
     def __init__(self, rate):
@@ -29,13 +29,14 @@ class ExtendedKalmanFilter():
         self.rate = rate
         # Initialize system constants
         self.r = 0.26            # = 260 mm, distance between 2 landing legs is 520 mm.
-        self.dt = rp.get_time()          # The time step for the sonar sensor reading, the lowest frequency among all sensors
+        self.start_time = 0          # The time step for the sonar sensor reading, the lowest frequency among all sensors
+        self.dt = 0
         
         # Initialize R and Q matrices
         self.Q = np.matrix(np.diag([0.01, 0.0488, 0.0004, 0.000324, 0.00027]))       # [z; z_dot; roll(phi); pitch(theta); offset]
         self.R = np.matrix(np.diag([0.00001, 0.005, 0.00005, 0.0002]))               # [GPS, Sonar, Roll, Pitch]
-        self.F = np.matrix(np.zeros(5, 5))
-        self.H = np.matrix(np.zeros(4, 5))
+        self.F = np.matrix(np.zeros((5, 5)))
+        self.H = np.matrix(np.zeros((4, 5)))
         self.K = None
         self.quat = list(np.zeros(4))                                               # [qw, qx, qy, qz]
         #%% 1. Extended Kalman Filter
@@ -82,7 +83,7 @@ class ExtendedKalmanFilter():
     def sonarCallback(self, msg):
         self.y[1,0] = msg.data
         
-    def quaternion_to_euler_angle(w, x, y, z):
+    def quaternion_to_euler_angle(self, w, x, y, z):
         ysqr = y * y
     
         t0 = +2.0 * (w * x + y * z)
@@ -100,12 +101,12 @@ class ExtendedKalmanFilter():
     
         return X, Y, Z
     
-    def fetchF_EKF(X, dt):
+    def fetchF_EKF(self):
         # X = [x1; x2; x3; x4; x5]
         # X = [z; z_dot; roll; pitch; offset]
         
         self.F[0, 0] = 1 #df1dx1
-        self.F[0, 1] = dt #df1dx2
+        self.F[0, 1] = self.dt #df1dx2
         self.F[0, 2] = 0 #df1dx3
         self.F[0, 3] = 0 #df1dx4
         self.F[0, 4] = 0 #df1dx5
@@ -134,7 +135,7 @@ class ExtendedKalmanFilter():
         self.F[4, 3] = 0 #df5dx4
         self.F[4, 4] = 1 #df5dx5
 
-    def fetchH_EKF(X):
+    def fetchH_EKF(self):
         # X = [x1; x2; x3; x4; x5]
         # X = [z; z_dot; roll(phi); pitch(theta); offset; offset_dot]
         # h1 = GPS+FCU measurement
@@ -142,9 +143,9 @@ class ExtendedKalmanFilter():
         # h3 = roll angle measurement
         # h4 = pitch angle measurement
         
-        #r = 0.26 # 260 mm, distance between 2 landing legs is 520 mm.
-        #dt = 0.067
-        cpct = np.cos(X[2,0])*np.cos(X[3,0])
+        # self.r = 0.26 # 260 mm, distance between 2 landing legs is 520 mm.
+        # self.dt = 0.067
+        cpct = np.cos(self.X_est_EKF[2,0])*np.cos(self.X_est_EKF[3,0])
     
         self.H[0, 0] = 1 # dH1dx1
         self.H[0, 1] = 0 # dH1dx2
@@ -153,9 +154,9 @@ class ExtendedKalmanFilter():
         self.H[0, 4] = 1 #dH1dx5
         
         self.H[1, 0] = 1/cpct # dH2dx1
-        self.H(1, 1] = 0 # dH2dx2
-        self.H[1, 2] = self.r + (X[0,0] + self.r*np.sin(X[2,0])*np.cos(X[3,0]))*tan(X[2,0])/cpct #dH2dx3
-        self.H[1, 3] = X[0,0]*tan(X[3,0])/cpct #dH2dx4
+        self.H[1, 1] = 0 # dH2dx2
+        self.H[1, 2] = self.r + (self.X_est_EKF[0,0] + self.r*np.sin(self.X_est_EKF[2,0])*np.cos(self.X_est_EKF[3,0]))*np.tan(self.X_est_EKF[2,0])/cpct #dH2dx3
+        self.H[1, 3] = self.X_est_EKF[0,0]*np.tan(self.X_est_EKF[3,0])/cpct #dH2dx4
         self.H[1, 4] = 0 #dH2dx5
         
         self.H[2, 0] = 0 # dH3dx1
@@ -171,20 +172,23 @@ class ExtendedKalmanFilter():
         self.H[3, 4] = 0 #dH4dx5
 
     def stateEstimate(self):
-        
-        self.dt = rp.get_time()-self.dt
+        if self.start_time == 0:
+            self.start_time = rp.get_time()
+            self.dt = 0.033
+        else:
+            self.dt = rp.get_time()-self.start_time
         # Update the true and estimated states        
         self.X_est_EKF[0, 0] = self.X_est_EKF[0, 0] + self.X_est_EKF[1, 0]*self.dt
-        self.X_est_EKF[1, 0] = self.X_est_EKF[1, 0] + u[0,0]*self.dt
-        self.X_est_EKF[2, 0] = self.X_est_EKF[2, 0] + u[1,0]*self.dt
-        self.X_est_EKF[3, 0] = self.X_est_EKF[3, 0] + u[2,0]*self.dt
+        self.X_est_EKF[1, 0] = self.X_est_EKF[1, 0] + self.u[0,0]*self.dt
+        self.X_est_EKF[2, 0] = self.X_est_EKF[2, 0] + self.u[1,0]*self.dt
+        self.X_est_EKF[3, 0] = self.X_est_EKF[3, 0] + self.u[2,0]*self.dt
         self.X_est_EKF[4, 0] = self.X_est_EKF[4, 0]
         
         # Update the error covariance matrix
-        fetchF_EKF(self.X_est_EKF,self.dt)
+        self.fetchF_EKF()
         self.P_EKF = self.F*self.P_EKF*self.F.T + self.Q
         
-        angles = quaternion_to_euler_angle(self.quat[0], self.quat[1], self.quat[2], self.quat[3])      # returns euler angles in XYZ format in radians
+        angles = self.quaternion_to_euler_angle(self.quat[0], self.quat[1], self.quat[2], self.quat[3])      # returns euler angles in XYZ format in radians
        
         # Get Measurements
     #   y[0, 0] = GPS Altitude
@@ -194,12 +198,12 @@ class ExtendedKalmanFilter():
         
         # Get expected measurement
         self.y_exp[0, 0] = self.X_est_EKF[0, 0] + self.X_est_EKF[4, 0]
-        self.y_exp[1, 0] = (self.X_est_EKF[0, 0]+r*np.sin(self.X_est_EKF[2, 0])*np.cos(self.X_est_EKF[3, 0]))/(np.cos(self.X_est_EKF[2, 0])*np.cos(self.X_est_EKF[3, 0]))
+        self.y_exp[1, 0] = (self.X_est_EKF[0, 0]+self.r*np.sin(self.X_est_EKF[2, 0])*np.cos(self.X_est_EKF[3, 0]))/(np.cos(self.X_est_EKF[2, 0])*np.cos(self.X_est_EKF[3, 0]))
         self.y_exp[2, 0] = self.X_est_EKF[2, 0]
         self.y_exp[3, 0] = self.X_est_EKF[3, 0]
         
         # Compute H Matrix
-        fetchH_EKF(self.X_est_EKF)
+        self.fetchH_EKF()
         
         # ---------------------------------------------------------------------
         # Vanilla EKF
@@ -234,7 +238,11 @@ class ExtendedKalmanFilter():
             # Update Error covariance
             self.P_EKF = (np.matrix(np.eye(5)) - self.K*self.H[i,:])*self.P_EKF        
         # ---------------------------------------------------------------------
-    
+        
+        # update the start_time
+        self.start_time = rp.get_time()
+        
+        
     def EKFInfoPublisher(self,):
         r = rp.Rate(self.rate)
         EKF_msg = EKFInfo()
