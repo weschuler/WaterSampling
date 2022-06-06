@@ -9,6 +9,7 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
 from std_msgs.msg import Float32
 from watersampling_msgs.msg import EKFInfo
+from watersampling_msgs.msg import SonarStamped
 
 
 class ExtendedKalmanFilter():
@@ -57,7 +58,7 @@ class ExtendedKalmanFilter():
         self.position_sub = rp.Subscriber(
             '/mavros/global_position/local', Odometry, self.positionCallback, queue_size=1)
         self.sonar_sensor_sub = rp.Subscriber(
-            '/watersampling/sonar_dist', Float32, self.sonarCallback, queue_size=1)
+            '/watersampling/sonar_dist', SonarStamped, self.sonarCallback, queue_size=1)
         
         # ROS Publisher
         self.EKF_info_pub = rp.Publisher(
@@ -81,7 +82,7 @@ class ExtendedKalmanFilter():
         self.u[1,0] = msg.data.angular_velocity.x           # roll_rate
         self.u[2,0] = msg.data.angular_velocity.y           # pitch_rate
     def sonarCallback(self, msg):
-        self.y[1,0] = msg.data
+        self.y[1,0] = msg.distance.data
         
     def quaternion_to_euler_angle(self, w, x, y, z):
         ysqr = y * y
