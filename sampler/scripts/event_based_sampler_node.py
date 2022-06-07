@@ -9,7 +9,7 @@ from bottle_state import Bottle
 
 from std_msgs.msg import Bool
 from std_msgs.msg import Int16
-from std_msgs.msg import Int32
+from std_msgs.msg import Float32
 from mavros_msgs.msg import RCIn
 from watersampling_msgs.msg import MS5837Stamped, PumpInfo
 
@@ -27,15 +27,15 @@ class SamplerNode():
     _RC_TRIGGER_CHANNEL_SamplerA = 6        # 1851 - 1494 -1136
     _RC_HIGH_SamplerA = 1494
 
-    _MASTER_PUMP_PIN = 20   #BCM pin 20, BOARD pin 38
+    _MASTER_PUMP_PIN = 16   #BCM pin 16, BOARD pin 36
     _SAMPLING_PUMP_A = 26   #BCM pin 26, BOARD pin 37
-    _SAMPLING_PUMP_B = 16   #BCM pin 16, BOARD pin 36
+    _SAMPLING_PUMP_B = 20   #BCM pin 20, BOARD pin 38
     _SAMPLING_PUMP_C = 19   #BCM pin 19, BOARD pin 35
     
-    _MAIN_CHANNEL = 1       #BCM pin 1
+    _MAIN_CHANNEL = 8       #BCM pin 8
     _BOTTLE_A = 7           #BCM pin 7
-    _BOTTLE_B = 8           #BCM pin 8
-    _BOTTLE_C = 25          #BCM pin 25
+    _BOTTLE_B = 25          #BCM pin 25
+    _BOTTLE_C = 1           #BCM pin 1
 
     def __init__(self, rate):
         rp.init_node("water_sampler_node")
@@ -61,9 +61,10 @@ class SamplerNode():
         self.enable_sampler_A = False
         
         self.inlet_depth = 0.0
-        self.sampling_depth = 0.20
+        self.sampling_depth = 0.2
         self.fluor_median = 0
         self.depth_flag = 0
+        self.fluor_trigger = 100.0
 
         # Fluorescence sensor
         self.fluorescence_readings = []
@@ -75,7 +76,7 @@ class SamplerNode():
         self.depth_sensor_sub = rp.Subscriber(
             '/watersampling/depth_sensor', MS5837Stamped, self.depthSensorCallback, queue_size=1)
         self.fluor_sensor_sub = rp.Subscriber(
-            '/sensor/fluor', Int32, self.fluorSensorCallback, queue_size=1)
+            '/sensor/fluor', Float32, self.fluorSensorCallback, queue_size=1)
 
         # ROS Publisher
         self.pump_info_pub = rp.Publisher(
@@ -125,21 +126,21 @@ class SamplerNode():
 
     def stateMachine(self,):
         if self.enable_sampler_main == True:
-            if self.inlet_depth >= self.sampling_depth or self.enable_sampler_C == True:
+            if self.inlet_depth >= self.sampling_depth or self.enable_sampler_C == True:   #self.enable_sampler_C is the RC switch
                 self.master_pump.start()
                 
                 #%% Check if there is water running in the circuit------------------------------
                 
                 if self.main_channel.is_full == True:
-                    SamplerNode.mode_sendor(self, 1)                    # publishes mode = 1 to the /sensor/mode topic to start getting fluorescence measurements               
+                    SamplerNode.mode_sendor(self, 1)        # publishes mode = 1 to the /sensor/mode topic to start getting fluorescence measurements               
                 
                 #%% Calculate median of fluorescence window-------------------------------------
                 if(len(self.fluorescence_readings) > 0):
                     self.fluor_median = median(self.fluorescence_readings)
                 else:
-                    self.fluor_median = 1200                # Change this to zero when we the fluoresensor is connected to the Pi
+                    self.fluor_median = 0                # Change this to zero when we the fluoresensor is connected to the Pi
                 
-                if(self.sampling_flag == 0 and self.fluor_median > 1000):
+                if(self.sampling_flag == 0 and self.fluor_median > self.fluor_trigger):
                     self.sampling_flag = 1
                     
                 #%% Sampling--------------------------------------------------------------------
