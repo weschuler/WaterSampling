@@ -40,6 +40,9 @@ class ExtendedKalmanFilter():
         self.H = np.matrix(np.zeros((4, 5)))
         self.K = None
         self.quat = list(np.zeros(4))                                               # [qw, qx, qy, qz]
+        
+        self.sonar_readings = []
+        
         #%% 1. Extended Kalman Filter
         # Initialize the variables to store the estimated state,
         # the error covariance matrix, the process and the measurement noise
@@ -78,11 +81,21 @@ class ExtendedKalmanFilter():
         self.quat[2] = msg.pose.pose.orientation.y
         self.quat[3] = msg.pose.pose.orientation.z
     def imuCallback(self, msg):
-        self.u[0,0] = msg.data.linear_acceleration.z        # acceleration_z
+        self.ax_b = msg.data.linear_acceleration.x        # acceleration_x in body frame
+        self.ay_b = msg.data.linear_acceleration.y        # acceleration_y in body frame
+        self.az_b = msg.data.linear_acceleration.z        # acceleration_z in body frame
+        
         self.u[1,0] = msg.data.angular_velocity.x           # roll_rate
         self.u[2,0] = msg.data.angular_velocity.y           # pitch_rate
     def sonarCallback(self, msg):
         self.y[1,0] = msg.distance.data
+        self.y[1,0] = self.max_filter(msg.distance.data, 5)
+        
+    def max_filter(self, dist, window):
+        self.sonar_readings.append(dist)
+        while len(self.sonar_readings) > window:
+            self.sonar_readings.pop(0)
+        return max(self.sonar_readings)
         
     def quaternion_to_euler_angle(self, w, x, y, z):
         ysqr = y * y
@@ -114,8 +127,8 @@ class ExtendedKalmanFilter():
         
         self.F[1, 0] = 0 #df2dx1
         self.F[1, 1] = 1 #df2dx2
-        self.F[1, 2] = 0 #df2dx3
-        self.F[1, 3] = 0 #df2dx4
+        self.F[1, 2] = (np.cos(X_est_EKF[2,0])*np.cos(X_est_EKF[3,0])*self.ay_b - np.sin(X_est_EKF[2,0])*np.cos(X_est_EKF[3,0])*self.az_b)*self.dt #df2dx3
+        self.F[1, 3] = (-np.cos(X_est_EKF[3,0])*self.ax_b - np.sin(X_est_EKF[2,0])*np.sin(X_est_EKF[3,0])*self.ay_b - np.cos(X_est_EKF[2,0])*np.sin(X_est_EKF[3,0])*self.az_b)*self.dt #df2dx4
         self.F[1, 4] = 0 #df2dx5
         
         self.F[2, 0] = 0 #df3dx1
@@ -175,10 +188,14 @@ class ExtendedKalmanFilter():
     def stateEstimate(self):
         if self.start_time == 0:
             self.start_time = rp.get_time()
-            self.dt = 0.033
+            self.dt = 0.066
         else:
             self.dt = rp.get_time()-self.start_time
-        # Update the true and estimated states        
+        
+        # Update the acceleration inputs and transform them to the world frame
+        self.u[0,0] = (-np.sin(X_est_EKF[3,0]))*self.ax_b + np.sin(X_est_EKF[2,0])*np.cos(X_est_EKF[3,0])*self.ay_b + np.cos(X_est_EKF[2,0])*np.cos(X_est_EKF[3,0])*self.az_b - 9.8;        # acceleration_z in the world frame
+        
+        # Update the estimated states        
         self.X_est_EKF[0, 0] = self.X_est_EKF[0, 0] + self.X_est_EKF[1, 0]*self.dt
         self.X_est_EKF[1, 0] = self.X_est_EKF[1, 0] + self.u[0,0]*self.dt
         self.X_est_EKF[2, 0] = self.X_est_EKF[2, 0] + self.u[1,0]*self.dt
@@ -265,23 +282,10 @@ class ExtendedKalmanFilter():
             r.sleep()
 
 if __name__ == '__main__':
-    ExtendedKalmanFilter(20)
+    ExtendedKalmanFilter(15)
 
 #%% All the functions are down below
 
-
-
-
-#%% MAX Filter
-#def max_filter(data, window):
-#    data_buffer = []
-#    filtered_data = zeros(size(data))
-#    for i = 1 : length(data):
-#        data_buffer = [data_buffer; data(i)]
-#        if length(data_buffer) > window:
-#            data_buffer = data_buffer(2:)
-#        
-#        filtered_data(i) = max(data_buffer)
 #
 ##%% Secondmax Filter
 #def secondmax_filter(data, window):
