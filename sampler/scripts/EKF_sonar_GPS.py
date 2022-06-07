@@ -32,7 +32,10 @@ class ExtendedKalmanFilter():
         self.r = 0.26            # = 260 mm, distance between 2 landing legs is 520 mm.
         self.start_time = 0          # The time step for the sonar sensor reading, the lowest frequency among all sensors
         self.dt = 0
-        
+        self.ax_b = 0
+        self.ay_b = 0
+        self.az_b = 0 
+              
         # Initialize R and Q matrices
         self.Q = np.matrix(np.diag([0.01, 0.0488, 0.0004, 0.000324, 0.00027]))       # [z; z_dot; roll(phi); pitch(theta); offset]
         self.R = np.matrix(np.diag([0.00001, 0.005, 0.00005, 0.0002]))               # [GPS, Sonar, Roll, Pitch]
@@ -88,13 +91,15 @@ class ExtendedKalmanFilter():
         self.u[1,0] = msg.data.angular_velocity.x           # roll_rate
         self.u[2,0] = msg.data.angular_velocity.y           # pitch_rate
     def sonarCallback(self, msg):
-        self.y[1,0] = msg.distance.data
-        self.y[1,0] = self.max_filter(msg.distance.data, 5)
+        #self.y[1,0] = msg.distance.data                    # take raw sonar data as measurement
+        self.y[1,0] = self.max_filter(msg.distance.data, 5) # take max filtered sonar data as measurement
         
     def max_filter(self, dist, window):
+       # print(self.sonar_readings)
         self.sonar_readings.append(dist)
         while len(self.sonar_readings) > window:
             self.sonar_readings.pop(0)
+        
         return max(self.sonar_readings)
         
     def quaternion_to_euler_angle(self, w, x, y, z):
@@ -127,8 +132,13 @@ class ExtendedKalmanFilter():
         
         self.F[1, 0] = 0 #df2dx1
         self.F[1, 1] = 1 #df2dx2
-        self.F[1, 2] = (np.cos(X_est_EKF[2,0])*np.cos(X_est_EKF[3,0])*self.ay_b - np.sin(X_est_EKF[2,0])*np.cos(X_est_EKF[3,0])*self.az_b)*self.dt #df2dx3
-        self.F[1, 3] = (-np.cos(X_est_EKF[3,0])*self.ax_b - np.sin(X_est_EKF[2,0])*np.sin(X_est_EKF[3,0])*self.ay_b - np.cos(X_est_EKF[2,0])*np.sin(X_est_EKF[3,0])*self.az_b)*self.dt #df2dx4
+        self.F[1, 2] = (np.cos(self.X_est_EKF[2,0])*np.cos(self.X_est_EKF[3,0])*self.ay_b - \
+        np.sin(self.X_est_EKF[2,0])*np.cos(self.X_est_EKF[3,0])*self.az_b)*self.dt #df2dx3
+        
+        self.F[1, 3] = (-np.cos(self.X_est_EKF[3,0])*self.ax_b - \
+        np.sin(self.X_est_EKF[2,0])*np.sin(self.X_est_EKF[3,0])*self.ay_b - \
+        np.cos(self.X_est_EKF[2,0])*np.sin(self.X_est_EKF[3,0])*self.az_b)*self.dt #df2dx4
+        
         self.F[1, 4] = 0 #df2dx5
         
         self.F[2, 0] = 0 #df3dx1
@@ -193,7 +203,9 @@ class ExtendedKalmanFilter():
             self.dt = rp.get_time()-self.start_time
         
         # Update the acceleration inputs and transform them to the world frame
-        self.u[0,0] = (-np.sin(X_est_EKF[3,0]))*self.ax_b + np.sin(X_est_EKF[2,0])*np.cos(X_est_EKF[3,0])*self.ay_b + np.cos(X_est_EKF[2,0])*np.cos(X_est_EKF[3,0])*self.az_b - 9.8;        # acceleration_z in the world frame
+        self.u[0,0] = (-np.sin(self.X_est_EKF[3,0]))*self.ax_b + \
+        np.sin(self.X_est_EKF[2,0])*np.cos(self.X_est_EKF[3,0])*self.ay_b + \
+        np.cos(self.X_est_EKF[2,0])*np.cos(self.X_est_EKF[3,0])*self.az_b - 9.8;        # acceleration_z in the world frame
         
         # Update the estimated states        
         self.X_est_EKF[0, 0] = self.X_est_EKF[0, 0] + self.X_est_EKF[1, 0]*self.dt
@@ -209,8 +221,8 @@ class ExtendedKalmanFilter():
         angles = self.quaternion_to_euler_angle(self.quat[0], self.quat[1], self.quat[2], self.quat[3])      # returns euler angles in XYZ format in radians
        
         # Get Measurements
-    #   y[0, 0] = GPS Altitude
-    #   y[1, 0] = sonar_sensor
+    #   self.y[0, 0] = GPS Altitude
+    #   self.y[1, 0] = sonar_sensor
         self.y[2, 0] = angles[0]    # ROLL ANGLE IN RADIAN
         self.y[3, 0] = angles[1]    # PITCH ANGLE IN RADIAN
         
