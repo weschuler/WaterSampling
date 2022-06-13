@@ -29,7 +29,7 @@ class ExtendedKalmanFilter():
         rp.init_node("EKF_node")
         self.rate = rate
         # Initialize system constants
-        self.r = 0.26            # = 260 mm, distance between 2 landing legs is 520 mm.
+        self.r = 0.10            # = 100 mm, distance between sonar and pixhawk in f550 testbed.
         self.start_time = 0          # The time step for the sonar sensor reading, the lowest frequency among all sensors
         self.dt = 0
         self.ax_b = 0
@@ -60,7 +60,7 @@ class ExtendedKalmanFilter():
         
         # ROS Subscribers
         self.imu_sub = rp.Subscriber(
-            '/mavros/', Odometry, self.imuCallback, queue_size=1)
+            '/mavros/imu/data', Imu, self.imuCallback, queue_size=1)
         self.position_sub = rp.Subscriber(
             '/mavros/global_position/local', Odometry, self.positionCallback, queue_size=1)
         self.sonar_sensor_sub = rp.Subscriber(
@@ -83,13 +83,17 @@ class ExtendedKalmanFilter():
         self.quat[1] = msg.pose.pose.orientation.x
         self.quat[2] = msg.pose.pose.orientation.y
         self.quat[3] = msg.pose.pose.orientation.z
-    def imuCallback(self, msg):
-        self.ax_b = msg.data.linear_acceleration.x        # acceleration_x in body frame
-        self.ay_b = msg.data.linear_acceleration.y        # acceleration_y in body frame
-        self.az_b = msg.data.linear_acceleration.z        # acceleration_z in body frame
         
-        self.u[1,0] = msg.data.angular_velocity.x           # roll_rate
-        self.u[2,0] = msg.data.angular_velocity.y           # pitch_rate
+        #print('x: ',self.quat[1],'y: ', self.quat[2],'z: ', self.quat[3],'w: ', self.quat[0])
+    def imuCallback(self, msg):
+        self.ax_b = msg.linear_acceleration.x        # acceleration_x in body frame
+        self.ay_b = msg.linear_acceleration.y        # acceleration_y in body frame
+        self.az_b = msg.linear_acceleration.z        # acceleration_z in body frame
+        
+        self.u[1,0] = msg.angular_velocity.x           # roll_rate
+        self.u[2,0] = msg.angular_velocity.y           # pitch_rate
+        
+        #print('x: ',self.u[1,0],'y: ', self.u[2,0])
     def sonarCallback(self, msg):
         #self.y[1,0] = msg.distance.data                    # take raw sonar data as measurement
         self.y[1,0] = self.max_filter(msg.distance.data, 5) # take max filtered sonar data as measurement
