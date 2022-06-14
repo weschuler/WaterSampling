@@ -27,7 +27,7 @@ class JoyRCNode():
     rp.loginfo('MavROS and NMPC services are available')
 
     # Setpoints
-    self.setpoint = [0,0,1.0]
+    self.setpoint = [0,0,1.0,0]             # [x, y, z, yaw]
 
     # Input cmds
     self.vel_x_input = 0.0
@@ -39,6 +39,18 @@ class JoyRCNode():
     self.pos_world = np.matrix(np.zeros(3)).T
     self.pos_body = np.matrix(np.zeros(3)).T
     self.quat = np.zeros(4)
+
+    # Error value initialization
+    self.error_x = 0.0
+    self.error_y = 0.0 
+    self.error_z = 0.0
+    self.error_q = 0.0
+    
+    self.prev_error_x = 0.0
+    self.prev_error_y = 0.0 
+    self.prev_error_z = 0.0
+    self.prev_error_q = 0.0
+    
     
     # Velocity cmds
     self.vel_x_cmd = 0.0
@@ -90,7 +102,8 @@ class JoyRCNode():
     self.arm_bttn = msg.buttons[5]                  # RB button
     self.ofb_bttn = msg.buttons[4]                  # LB button
     self.pd_bttn = msg.buttons[7]                   # RT button
-    
+
+#-----------------------uncomment this when flying inside optitrack-----------    
   def positionCallback(self, msg):                   # position callback from /mavros/local_position/pose
     self.pos_world[0,0] = msg.pose.position.x        # position x in world frame
     self.pos_world[1,0] = msg.pose.position.y        # position y in world frame
@@ -99,7 +112,7 @@ class JoyRCNode():
     self.quat[1] = msg.pose.orientation.x
     self.quat[2] = msg.pose.orientation.y
     self.quat[3] = msg.pose.orientation.z
-    
+#-----------------------uncomment this when flying with GPS-------------------    
 #  def positionCallback(self, msg):                         # position callback from /mavros/global_position/local
 #    self.pos_world[0,0] = msg.pose.pose.position.x        # position x in world frame
 #    self.pos_world[1,0] = msg.pose.pose.position.y        # position y in world frame
@@ -116,18 +129,22 @@ class JoyRCNode():
     Kp_xy = 0.4282          # Proportional gain for xy input
     Kd_xy = 0.0077          # Derivative gain for xy input
     
-    R_W_B = quat2rotm(quat[0], quat[1], quat[2], quat[3])               # Rotation matrix for transforming body to world
-    R_B_W = R_W_B.T                                                     # Rotation matrix for transforming world to body
+    rpy = quat2eul(self.quat[0], self.quat[1], self.quat[2], self.quat[3])
+    yaw = rpy[2]
+
+    R_W_B = eul2rotm(rpy[2], rpy[1], rpy[0])               # Rotation matrix for transforming body to world
+    R_B_W = R_W_B.T                                        # Rotation matrix for transforming world to body
     
-    #self.pos_body = R_B_W*self.pos_world
     
     self.error_x = self.setpoint[0] - self.pos_world[0,0]
     self.error_y = self.setpoint[1] - self.pos_world[1,0]
     self.error_z = self.setpoint[2] - self.pos_world[2,0]
+    self.error_q = self.setpoint[3] - yaw
 
     x_input_world = Kp_xy*self.error_x + Kd_xy*(self.error_x-self.prev_error_x)
     y_input_world = Kp_xy*self.error_y + Kd_xy*(self.error_y-self.prev_error_y)
-    z_input_world = Kp_z*self.error_z + Kd_z*(self.error_z-self.prev_error_z)    
+    z_input_world = Kp_z*self.error_z + Kd_z*(self.error_z-self.prev_error_z)
+    q_input_world = Kp_xy*self.error_q + Kd_xy*(self.error_q-self.prev_error_q)
     
     input_world = np.matrix([x_input_world, y_input_world, z_input_world]).T
     input_body = R_B_W*input_world                                              # rotated the inputs in world frame to body frame
@@ -135,23 +152,25 @@ class JoyRCNode():
     self.vel_x_input = input_body[0,0]
     self.vel_y_input = input_body[1,0]
     self.vel_z_input = input_body[2,0]
-    self.vel_q_input = 0.0  
+    self.vel_q_input = q_input_world
     
     self.prev_error_x = self.error_x
     self.prev_error_y = self.error_y 
-    self.prev_error_z = self.error_z 
+    self.prev_error_z = self.error_z
+    self.prev_error_q = self.error_q
+    
 
   def commandPublisher(self,):
     r = rp.Rate(self.rate)
     cmd_msg = PositionTarget()
     cmd_msg.coordinate_frame = PositionTarget().FRAME_BODY_NED
-    cmd_msg.type_mask = PositionTarget().IGNORE_PX + \          # this is setting up the command publisher to ignore position or acceleration commands and only to take velocity commands and yaw rate.
+    cmd_msg.type_mask = PositionTarget().IGNORE_PX + \
                         PositionTarget().IGNORE_PY + \
                         PositionTarget().IGNORE_PZ + \
                         PositionTarget().IGNORE_AFX + \
                         PositionTarget().IGNORE_AFY + \
                         PositionTarget().IGNORE_AFZ + \
-                        PositionTarget().IGNORE_YAW
+                        PositionTarget().IGNORE_YAW          # this is setting up the command publisher to ignore position or acceleration commands and only to take velocity commands and yaw rate.
     cmd_msg.velocity.x = 0.0
     cmd_msg.velocity.y = 0.0
     cmd_msg.velocity.z = 0.0
@@ -172,7 +191,6 @@ class JoyRCNode():
         if self.pd_bttn == 1.0 and not self.pd_enabled:
          # self.ctrl_serv(True)
           self.pd_enabled = True
-          self.PD_controller()
         elif self.pd_bttn == 0.0 and self.pd_enabled:
          # self.ctrl_serv(False)
           self.pd_enabled = False
@@ -187,6 +205,7 @@ class JoyRCNode():
           self.vel_cmd_pub.publish(cmd_msg)
           
         elif self.armed and self.pd_enabled:
+          self.PD_controller()
           cmd_msg.velocity.x = self.vel_x_input
           cmd_msg.velocity.y = self.vel_y_input
           cmd_msg.velocity.z = self.vel_z_input
