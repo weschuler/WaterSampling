@@ -207,6 +207,7 @@ class SamplerNode():
 
             # Populate and publish pump message
             pump_msg.header.stamp = rp.Time.now()
+            pump_msg.flag.data = self.sampling_flag
             pump_msg.master_pump.data = self.master_pump.isrunning
             pump_msg.sampling_pump_a.data = self.sampling_pump_a.isrunning
             pump_msg.sampling_pump_b.data = self.sampling_pump_b.isrunning
