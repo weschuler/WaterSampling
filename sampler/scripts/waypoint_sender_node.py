@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/python3
 
 #
 # @base author Andreas Antener <andreas@uaventure.com>
@@ -80,22 +80,30 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
 
 #%%        """Extract waypoints (both LLA and ENU) from a plan file and store into a dictionary."""
         """Test mission"""
-        if len(sys.argv) < 2:
-            rospy.logerr("usage: joy_global_waypoint_sender.py mission_file.plan")
+
+#-------------------------Uncomment if running script form terminal------------
+#        if len(sys.argv) < 2:
+#            rospy.logerr("usage: joy_global_waypoint_sender.py mission_file.plan")
+#            return
+#
+#        path = os.path.dirname(os.path.realpath(__file__))
+#        path_split = path.split('/')
+#        path_to_mission = ''
+#        for i in range(len(path_split) - 2):
+#            path_to_mission += path_split[i] + '/'
+#        path_to_mission += 'missions/'
+        
+#        mission_file = path_to_mission + sys.argv[1]
+
+#-------------------------Uncomment if running launch from terminal------------
+        mission_dir = rospy.get_param('/waypoint_sender_node/mission_directory')
+        mission_file = rospy.get_param('/waypoint_sender_node/file_name')
+        
+        if mission_file == 'None':
+            rospy.logerr("usage: waypoint_sender.launch mission_file:=mission_file.plan")
             return
-
-#        self.mission_name = sys.argv[1]
-#        path_to_mission = rp.get_param('/waypoint_sender_node/mission_directory')
+        mission_file = mission_dir + mission_file
         
-        path = os.path.dirname(os.path.realpath(__file__))
-        path_split = path.split('/')
-        path_to_mission = ''
-        for i in range(len(path_split) - 2):
-            path_to_mission += path_split[i] + '/'
-        path_to_mission += 'missions/'
-        
-        mission_file = path_to_mission + sys.argv[1]
-
         rospy.loginfo("reading mission {0}".format(mission_file))
         
         f = ReadPlanFile(mission_file)
