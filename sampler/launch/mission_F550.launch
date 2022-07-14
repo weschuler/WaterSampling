@@ -13,8 +13,8 @@
 	<arg name="mission_file" value="$(arg file)"/>
     </include>
     
-    <!-- include file="$(find sampler)/launch/sonar_sensor.launch"/ -->
-    <!-- include file="$(find sampler)/launch/EKF.launch"/ -->
+    <include file="$(find sampler)/launch/sonar_sensor.launch"/>
+    <include file="$(find sampler)/launch/EKF.launch"/>
     <!-- include file="$(find sampler)/launch/px4.launch"/ -->
 
     
@@ -37,11 +37,15 @@
 /mavros/rc/in
 /mavros/state
 /mavros/setpoint_raw/local
+/mavros/setpoint_position/local
 /joy
 /mavros/local_position/odom
-
+/mavros/distance_sensor/hrlv_ez4_pub
 /mavros/altitude
 
+/vrpn_client_node/F550/pose
+/watersampling/sonar_dist
+/watersampling/EKF_info
 
 "
   />
