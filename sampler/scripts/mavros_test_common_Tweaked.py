@@ -33,6 +33,8 @@ class MavrosTestCommonTweaked():
         self.mav_type = None
         
         # Control switches
+        _RC_TRIGGER_MISSION = 4           # 2006 - 1494 - 982
+        _RC_HIGH_MISSION = 1494
         self.arm_bttn = 0
         self.ofb_bttn = 0
         self.pd_bttn = 0
@@ -102,11 +104,18 @@ class MavrosTestCommonTweaked():
                                         EKFInfo, self.EKFCallback, queue_size=1)
         self.depth_sub = rospy.Subscriber('/watersampling/depth_sensor',\
                                           MS5837Stamped, self.depthCallback, queue_size = 1)
+        self.rc_sub = rp.Subscriber('/mavros/rc/in', RCIn, self.rcCallback, queue_size=1)
         
 
     #
     # Callback functions
     #
+    def rcCallback(self, msg):
+        if msg.channels[self._RC_TRIGGER_MISSION] == self._RC_HIGH_MISSION:
+            self.start = True
+        else:
+            self.start = False
+    
     def joyCallback(self, msg):
         self.arm_bttn = msg.buttons[5]                  # RB button
         self.ofb_bttn = msg.buttons[4]                  # LB button
