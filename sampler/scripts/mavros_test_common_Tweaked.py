@@ -9,7 +9,7 @@ import rospy
 import math
 from geometry_msgs.msg import PoseStamped
 from mavros_msgs.msg import Altitude, ExtendedState, HomePosition, ParamValue, State, \
-                            WaypointList
+                            WaypointList, RCIn
 from geographic_msgs.msg import GeoPointStamped
 from mavros_msgs.srv import CommandBool, ParamGet, ParamSet, SetMode, SetModeRequest, WaypointClear, \
                             WaypointPush
@@ -20,6 +20,10 @@ from six.moves import xrange
 
 
 class MavrosTestCommonTweaked():
+    
+    _RC_TRIGGER_MISSION = 4           # 2006 - 1494 - 982
+    _RC_HIGH_MISSION = 1494
+    
     def __init__(self, *args):
         
         self.altitude = Altitude()
@@ -33,8 +37,6 @@ class MavrosTestCommonTweaked():
         self.mav_type = None
         
         # Control switches
-        _RC_TRIGGER_MISSION = 4           # 2006 - 1494 - 982
-        _RC_HIGH_MISSION = 1494
         self.arm_bttn = 0
         self.ofb_bttn = 0
         self.pd_bttn = 0
@@ -104,7 +106,8 @@ class MavrosTestCommonTweaked():
                                         EKFInfo, self.EKFCallback, queue_size=1)
         self.depth_sub = rospy.Subscriber('/watersampling/depth_sensor',\
                                           MS5837Stamped, self.depthCallback, queue_size = 1)
-        self.rc_sub = rp.Subscriber('/mavros/rc/in', RCIn, self.rcCallback, queue_size=1)
+        self.rc_sub = rospy.Subscriber('/mavros/rc/in',\
+                                       RCIn, self.rcCallback, queue_size=1)
         
 
     #
@@ -118,7 +121,7 @@ class MavrosTestCommonTweaked():
     
     def joyCallback(self, msg):
         self.arm_bttn = msg.buttons[5]                  # RB button
-        self.ofb_bttn = msg.buttons[4]                  # LB button
+        self.ofb_bttn = msg.buttons[6]                  # LT button
         self.pd_bttn = msg.buttons[7]                   # RT button
         
         if self.pd_bttn == 1.0 and not self.start:
@@ -129,6 +132,12 @@ class MavrosTestCommonTweaked():
          # self.set_mode("POSCTL", 5)
         if self.arm_bttn == 1.0 and not self.state.armed:
             self.set_arm(True, 5)
+        
+        if self.ofb_bttn == 0.0 and self.state.mode != 'POSCTL':
+          self.set_mode("POSCTL", 5)
+        elif self.ofb_bttn == 1.0 and self.state.mode != 'OFFBOARD':
+          self.set_mode("OFFBOARD", 5)
+          
     def gp_origin_callback(self, msg):
         self.origin = msg
             
