@@ -320,6 +320,14 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             if self.start == True:
                 self.log_topic_vars()                                                # Logs all the important topics on the console.
                 rospy.loginfo("run mission")
+                
+# Measure the current yaw and fix the yaw to that
+                rpy = quat2eul(self.local_position.pose.orientation.w,\
+                self.local_position.pose.orientation.x,\
+                self.local_position.pose.orientation.y,\
+                self.local_position.pose.orientation.z,)
+                self.yaw = rpy[2]
+                rospy.loginfo("yaw fixed to: {0} degrees".format(np.degrees(self.yaw)))
     #            # exempting failsafe from lost RC to allow offboard
     #                rcl_except = ParamValue(1<<2, 0.0)
     #                self.set_param("COM_RCL_EXCEPT", rcl_except, 5)                 # Specify modes in which RC loss is ignored and the failsafe action not triggered. 0: Mission, 1: Hold, 2: Offboard
@@ -400,7 +408,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.local_position.pose.position.y,\
                                         2, 60)
                     self.reach_position(0,\
-                                        0,\
+                                        -1,\
                                         2, 60)
                     self.reached = True
                     while self.sampling_flag_data == 2 and not rospy.is_shutdown():
