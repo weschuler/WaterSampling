@@ -19,11 +19,7 @@ from sensor_msgs.msg import NavSatFix, Imu, Joy
 from six.moves import xrange
 
 class MavrosTestCommonTweaked():
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> cd4e75dc389880d925a2586db00f88f2b37b9f60
     _RC_TRIGGER_MISSION = 4           # 2006 - 1494 - 982
     _RC_HIGH_MISSION = 1494
     
@@ -40,10 +36,7 @@ class MavrosTestCommonTweaked():
         self.mav_type = None
         
         # Control switches
-<<<<<<< HEAD
 
-=======
->>>>>>> cd4e75dc389880d925a2586db00f88f2b37b9f60
         self.arm_bttn = 0
         self.ofb_bttn = 0
         self.pd_bttn = 0
@@ -114,12 +107,11 @@ class MavrosTestCommonTweaked():
                                         EKFInfo, self.EKFCallback, queue_size=1)
         self.depth_sub = rospy.Subscriber('/watersampling/depth_sensor',\
                                           MS5837Stamped, self.depthCallback, queue_size = 1)
-<<<<<<< HEAD
         self.rc_sub = rospy.Subscriber('/mavros/rc/in', RCIn, self.rcCallback, queue_size=1)
-=======
+
         self.rc_sub = rospy.Subscriber('/mavros/rc/in',\
                                        RCIn, self.rcCallback, queue_size=1)
->>>>>>> cd4e75dc389880d925a2586db00f88f2b37b9f60
+
         
 
     #
