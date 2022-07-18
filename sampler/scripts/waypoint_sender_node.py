@@ -44,7 +44,6 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         super().__init__()                            # It's calling the __init__() function of the parent Class MavrosTestCommonTweaked
         self.DnH = PD_Controller_Class(MavrosTestCommonTweaked)
         
-#        os.environ['MAVLINK20'] = '1'
         self.mission_waypoints_LLA = dict()
         self.mission_waypoints_ENU = dict()
         self.pos = PoseStamped()
@@ -63,7 +62,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.cmd_msg.velocity.z = 0.0
         self.cmd_msg.yaw_rate = 0.0
         
-        self.radius = 1
+        self.radius = 0.5
         self.yaw = 0
         self.reached = False
         self.sampling_flag_data = 0
@@ -146,7 +145,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     #
     def send_setpoint_pos(self):
         
-        rate = rospy.Rate(10)  # Hz
+        rate = rospy.Rate(30)  # Hz
         
         # Preparing messages for /mavros/setpoint_position/local topic
         self.pos.header = Header()
@@ -167,7 +166,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                 pass
     def send_setpoint_raw(self):
         
-        rate = rospy.Rate(10)  # Hz
+        rate = rospy.Rate(30)  # Hz
         
         self.cmd_msg.velocity.x = self.inputs[0]
         self.cmd_msg.velocity.y = self.inputs[1]
@@ -315,7 +314,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     #            # exempting failsafe from lost RC to allow offboard
     #                rcl_except = ParamValue(1<<2, 0.0)
     #                self.set_param("COM_RCL_EXCEPT", rcl_except, 5)                 # Specify modes in which RC loss is ignored and the failsafe action not triggered. 0: Mission, 1: Hold, 2: Offboard
-                self.set_mode("OFFBOARD", 5)
+   #             self.set_mode("OFFBOARD", 5)
                   
 
                 if self.sampling_flag_data == 0:
@@ -410,14 +409,16 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     
     def clock(self):
         while not rospy.is_shutdown():
+            rate = rospy.Rate(1)  # Hz
             if self.reached:
                 rospy.loginfo("flag changed")
-                rospy.sleep(50)
+                rospy.sleep(30)
                 self.sampling_flag_data += 1
                 rospy.loginfo(self.sampling_flag_data)
                 if self.sampling_flag_data == 3:
                     self.reached = False
                     self.sampling_flag_data = 0
+            rate.sleep()
             
     
 
