@@ -9,7 +9,7 @@ import rospy
 import math
 from geometry_msgs.msg import PoseStamped
 from mavros_msgs.msg import Altitude, ExtendedState, HomePosition, ParamValue, State, \
-                            WaypointList
+                            WaypointList, RCIn
 from geographic_msgs.msg import GeoPointStamped
 from mavros_msgs.srv import CommandBool, ParamGet, ParamSet, SetMode, SetModeRequest, WaypointClear, \
                             WaypointPush
@@ -18,8 +18,11 @@ from pymavlink import mavutil
 from sensor_msgs.msg import NavSatFix, Imu, Joy
 from six.moves import xrange
 
-
 class MavrosTestCommonTweaked():
+
+    _RC_TRIGGER_MISSION = 4           # 2006 - 1494 - 982
+    _RC_HIGH_MISSION = 1494
+    
     def __init__(self, *args):
         
         self.altitude = Altitude()
@@ -33,8 +36,7 @@ class MavrosTestCommonTweaked():
         self.mav_type = None
         
         # Control switches
-        _RC_TRIGGER_MISSION = 4           # 2006 - 1494 - 982
-        _RC_HIGH_MISSION = 1494
+
         self.arm_bttn = 0
         self.ofb_bttn = 0
         self.pd_bttn = 0
@@ -44,10 +46,11 @@ class MavrosTestCommonTweaked():
         self.sub_topics_ready = {
             key: False
             for key in [
-                'alt', 'ext_state', 'global_pos', 'home_pos', 'local_pos',
+                'alt', 'ext_state', 'local_pos',
                 'mission_wp', 'state', 'imu'
             ]
         }
+        #'global_pos', 'home_pos',                                              # Uncomment when flying with GPS
 
         # ROS services
         service_timeout = 30
@@ -104,7 +107,7 @@ class MavrosTestCommonTweaked():
                                         EKFInfo, self.EKFCallback, queue_size=1)
         self.depth_sub = rospy.Subscriber('/watersampling/depth_sensor',\
                                           MS5837Stamped, self.depthCallback, queue_size = 1)
-        self.rc_sub = rp.Subscriber('/mavros/rc/in', RCIn, self.rcCallback, queue_size=1)
+        self.rc_sub = rospy.Subscriber('/mavros/rc/in', RCIn, self.rcCallback, queue_size=1)
         
 
     #
