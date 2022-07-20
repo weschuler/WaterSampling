@@ -47,7 +47,7 @@ class MavrosTestCommonTweaked():
             key: False
             for key in [
                 'alt', 'ext_state', 'local_pos',
-                'mission_wp', 'state', 'imu'
+                'mission_wp', 'state', 'imu', 'global_pos', 'home_pos'
             ]
         }
         #'global_pos', 'home_pos',                                              # Uncomment when flying with GPS

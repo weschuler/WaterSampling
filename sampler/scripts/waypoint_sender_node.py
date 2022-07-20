@@ -77,53 +77,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
 #        self.pos_setpoint_pub = rospy.Publisher(
 #            'watersampling/setpoint_publisher', PoseStamped, queue_size=1)
 
-#%%        """Extract waypoints (both LLA and ENU) from a plan file and store into a dictionary."""
-        """Test mission"""
 
-#-------------------------Uncomment if running script form terminal------------
-#        if len(sys.argv) < 2:
-#            rospy.logerr("usage: joy_global_waypoint_sender.py mission_file.plan")
-#            return
-#
-#        path = os.path.dirname(os.path.realpath(__file__))
-#        path_split = path.split('/')
-#        path_to_mission = ''
-#        for i in range(len(path_split) - 2):
-#            path_to_mission += path_split[i] + '/'
-#        path_to_mission += 'missions/'
-        
-#        mission_file = path_to_mission + sys.argv[1]
-
-#-------------------------Uncomment if running launch from terminal------------
-        mission_dir = rospy.get_param('/waypoint_sender_node/mission_directory')
-        mission_file = rospy.get_param('/waypoint_sender_node/file_name')
-        
-        if mission_file == 'None':
-            rospy.logerr("usage: waypoint_sender.launch mission_file:=mission_file.plan")
-            return
-        mission_file = mission_dir + mission_file
-        
-        rospy.loginfo("reading mission {0}".format(mission_file))
-        
-        f = ReadPlanFile(mission_file)
-        try:
-            wps = f.read_mission()
-        except IOError as e:
-            rospy.logerr(e)
-        
-#%%        # Store the LLA waypoints in a dictionary with their sequence as their key.                 
-        for index, waypoint in enumerate(wps):
-        
-            # only check position for waypoints where this makes sense
-            if (waypoint.frame == Waypoint.FRAME_GLOBAL_REL_ALT or
-                    waypoint.frame == Waypoint.FRAME_GLOBAL):
-                alt = waypoint.z_alt
-                if waypoint.frame == Waypoint.FRAME_GLOBAL_REL_ALT:#                                            # alt = rel_alt
-                    alt += self.home_position.geo.altitude                                                      # set_alt_ellipsoid = rel_alt + home_alt_ellipsoid
-                elif waypoint.frame == Waypoint.FRAME_GLOBAL:#                                                  # alt = set_alt_amsl
-                    alt += self.home_position.geo.altitude - (self.altitude.amsl - self.altitude.relative)      # set_alt_ellipsoid = set_alt_amsl + (home_alt_ellipsoid - home_alt_amsl) 
-                    rospy.loginfo("altitude was in ellipsoid")
-            self.mission_waypoints_LLA[index] = (waypoint.x_lat, waypoint.y_long, alt)
 
         # make sure the simulation is ready to start the mission
         self.wait_for_topics(60)                                                 # This waits until all the topics are correctly being subscribed.
@@ -225,10 +179,10 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         current = self.u.geo2enu(self.global_position.latitude, self.global_position.longitude, self.global_position.altitude)
         dxy, dz = self.distance_to_wp(x,y,z)
         
-        if dxy > self.radius:
-            numerator = target[1,0] - current[1,0]                              # THE SUBTRACTION MUST BE FROM TARGET TO CURRENT.
-            denominator = target[0,0] - current[0,0]
-            self.yaw = math.atan2(numerator, denominator)
+#        if dxy > self.radius:
+#            numerator = target[1,0] - current[1,0]                              # THE SUBTRACTION MUST BE FROM TARGET TO CURRENT.
+#            denominator = target[0,0] - current[0,0]
+#            self.yaw = math.atan2(numerator, denominator)
 
         quaternion = eul2quat(0, 0, self.yaw)
 #        print("Both libraries equal?", np.allclose(quaternion, quaternion_from_quatlib))
@@ -238,7 +192,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.pos.pose.position.z = target[2,0]
         self.pos.pose.orientation = Quaternion(*quaternion)
         
-        self.setpoint = (target[0,0], target[1,0], 1.5, self.yaw)               # x, y, z, yaw
+        self.setpoint = (target[0,0], target[1,0], 1.0, self.yaw)               # x, y, z, yaw
 
         
         rospy.loginfo(
@@ -277,7 +231,8 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         
         while(self.origin == None):
             self.center = GeoPointStamped()
-            
+            rospy.loginfo("Waiting for EKF Origin fix")
+            rospy.sleep(10)
             self.center.header.frame_id = "geo"
             self.center.position.latitude = self.home_position.geo.latitude
             self.center.position.longitude = self.home_position.geo.longitude
@@ -286,6 +241,56 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             self.origin_pub.publish(self.center)
             
             rospy.sleep(1)
+        
+#%%        """Extract waypoints (both LLA and ENU) from a plan file and store into a dictionary."""
+        """Test mission"""
+
+#-------------------------Uncomment if running script form terminal------------
+#        if len(sys.argv) < 2:
+#            rospy.logerr("usage: joy_global_waypoint_sender.py mission_file.plan")
+#            return
+#
+#        path = os.path.dirname(os.path.realpath(__file__))
+#        path_split = path.split('/')
+#        path_to_mission = ''
+#        for i in range(len(path_split) - 2):
+#            path_to_mission += path_split[i] + '/'
+#        path_to_mission += 'missions/'
+        
+#        mission_file = path_to_mission + sys.argv[1]
+
+#-------------------------Uncomment if running launch from terminal------------
+        mission_dir = rospy.get_param('/waypoint_sender_node/mission_directory')
+        mission_file = rospy.get_param('/waypoint_sender_node/file_name')
+        
+        if mission_file == 'None':
+            rospy.logerr("usage: waypoint_sender.launch mission_file:=mission_file.plan")
+            return
+        mission_file = mission_dir + mission_file
+        
+        rospy.loginfo("reading mission {0}".format(mission_file))
+        
+        f = ReadPlanFile(mission_file)
+        try:
+            wps = f.read_mission()
+        except IOError as e:
+            rospy.logerr(e)
+        
+#%%        # Store the LLA waypoints in a dictionary with their sequence as their key.                 
+        for index, waypoint in enumerate(wps):
+        
+            # only check position for waypoints where this makes sense
+            if (waypoint.frame == Waypoint.FRAME_GLOBAL_REL_ALT or
+                    waypoint.frame == Waypoint.FRAME_GLOBAL):
+                alt = waypoint.z_alt
+                if waypoint.frame == Waypoint.FRAME_GLOBAL_REL_ALT:#                                            # alt = rel_alt
+                    alt += self.global_position.altitude - self.altitude.relative                                                      # set_alt_ellipsoid = rel_alt + home_alt_ellipsoid
+                elif waypoint.frame == Waypoint.FRAME_GLOBAL:#                                                  # alt = set_alt_amsl
+#                    alt += self.home_position.geo.altitude - (self.altitude.amsl - self.altitude.relative)      # set_alt_ellipsoid = set_alt_amsl + (home_alt_ellipsoid - home_alt_amsl) 
+                    rospy.logerr("Altitude frame not supported")
+                    return
+            self.mission_waypoints_LLA[index] = (waypoint.x_lat, waypoint.y_long, alt)
+        
            
         # Convert the mission_waypoints to ENU frame from LLA frame
         self.u = GPS_utils()
