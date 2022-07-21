@@ -229,19 +229,21 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     #
     def posctl(self):
         
+        rospy.loginfo("Please arm the drone to set the EKF origin")
         while(self.origin == None):
-            self.center = GeoPointStamped()
-            rospy.loginfo("Waiting for EKF Origin fix")
-            rospy.sleep(10)
-            self.center.header.frame_id = "geo"
-            self.center.position.latitude = self.home_position.geo.latitude
-            self.center.position.longitude = self.home_position.geo.longitude
-            self.center.position.altitude = self.home_position.geo.altitude
-            self.center.header.stamp = rospy.Time.now()
-            self.origin_pub.publish(self.center)
+            if self.state.armed:
+                self.center = GeoPointStamped()
+                rospy.loginfo("Waiting for EKF Origin fix")
+                rospy.sleep(10)
+                self.center.header.frame_id = "geo"
+                self.center.position.latitude = self.home_position.geo.latitude
+                self.center.position.longitude = self.home_position.geo.longitude
+                self.center.position.altitude = self.home_position.geo.altitude
+                self.center.header.stamp = rospy.Time.now()
+                self.origin_pub.publish(self.center)
             
             rospy.sleep(1)
-        
+        rospy.loginfo("Origin fixed!")
 #%%        """Extract waypoints (both LLA and ENU) from a plan file and store into a dictionary."""
         """Test mission"""
 
@@ -308,14 +310,16 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                   self.mission_waypoints_ENU[index][0], \
                                   self.mission_waypoints_ENU[index][1], \
                                   self.mission_waypoints_ENU[index][2]))
-
+        
+        rospy.loginfo("Ready for mission!")
+        
         while not rospy.is_shutdown():
 
             rate = rospy.Rate(10)  # Hz
             
             if self.start == True:
                 self.log_topic_vars()                                                # Logs all the important topics on the console.
-                rospy.loginfo("run mission")
+                rospy.loginfo("Running mission")
                                                                                     # Measure the current yaw and fix the yaw to that
                 rpy = quat2eul(self.local_position.pose.orientation.w,\
                 self.local_position.pose.orientation.x,\
