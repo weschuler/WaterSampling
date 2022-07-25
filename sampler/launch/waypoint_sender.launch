@@ -5,7 +5,7 @@
 	<arg name="mission_file" default="None" />
   <!-- Launch waypoint sender node -->
 
-	<node name="waypoint_sender_node" pkg="sampler" type="waypoint_sender_node.py" clear_params="true" output="screen">
+	<node name="waypoint_sender_node" pkg="sampler" type="waypoint_sender_node_vel_cmd.py" clear_params="true" output="screen">
     		<param name="mission_directory" value="$(find sampler)/missions/" />
     		<param name="file_name" value="$(arg mission_file)"/>
     		
