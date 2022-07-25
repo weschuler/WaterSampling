@@ -64,7 +64,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         
         self.radius = 0.5
         self.yaw = 0
-        self.setpoint = (self.local_position.pose.position.x, self.local_position.pose.position.y, self.local_position.pose.position.z, self.yaw)
+        self.setpoint = (self.local_position.pose.position.x, self.local_position.pose.position.y, self.local_from_global.pose.pose.position.z, self.yaw)
         self.reached = False
         self.sampling_flag_data = 0
         self.inputs = [0,0,0,0]
@@ -96,28 +96,6 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         
     #
 #%%    # Helper methods
-    #
-#    def send_setpoint_pos(self):
-#        
-#        rate = rospy.Rate(30)  # Hz
-#        
-#        # Preparing messages for /mavros/setpoint_position/local topic
-#        self.pos.header = Header()
-#        self.pos.header.frame_id = "base_footprint"
-#        
-#        while not rospy.is_shutdown():
-#            if not self.reached:
-#                
-#                self.pos.header.stamp = rospy.Time.now()
-#                self.pos_setpoint_pub.publish(self.pos)
-#                
-#            elif self.reached:
-#                pass
-#
-#            try:  # prevent garbage in console output when thread is killed
-#                rate.sleep()
-#            except rospy.ROSInterruptException:
-#                pass
             
     def send_setpoint_raw(self):
         
@@ -164,7 +142,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         rospy.logdebug(
             "current position | x:{0:.2f}, y:{1:.2f}, z:{2:.2f}".format(
                 self.local_position.pose.position.x, self.local_position.pose.
-                position.y, self.local_position.pose.position.z))
+                position.y, self.local_from_global.pose.pose.position.z))
 
 #        dxy, dz = self.distance_to_wp(lat,lon,alt)                              # Check using longitude, latitude, altitude using great circle distance.
 #       Check using x,y,z using pithagoras
@@ -173,7 +151,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                         self.local_position.pose.position.y))
 
         dxy = np.linalg.norm(desired - pos)
-        dz = abs(z - self.local_position.pose.position.z)
+        dz = abs(z - self.local_from_global.pose.pose.position.z)
 
         return dxy <= offset and dz < 0.3
 
@@ -198,14 +176,14 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
 #        self.pos.pose.orientation = Quaternion(*quaternion)
         
         
-        
+#%% Generate intermediate waypoints every 1.5 meters apart        
         n = int(dxy/1.5)
         if n < 2:
             n =  2
         xx = np.linspace(self.local_position.pose.position.x, target[0,0], n)
         yy = np.linspace(self.local_position.pose.position.y, target[1,0], n)
 
-        
+        rospy.loginfo("========================")
         rospy.loginfo(
             "attempting to reach position | latitude: {0}, longitude: {1}, altitude: {2} | current position latitude: {3}, longitude: {4}, altitude: {5}".
             format(x, y, z, self.global_position.latitude,
@@ -217,13 +195,13 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         for k in range(n):
             self.setpoint = (xx[k], yy[k], target[2,0], self.yaw)               # x, y, z, yaw
             
-            loop_freq = 2  # Hz
+            loop_freq = 10  # Hz
             rate = rospy.Rate(loop_freq)
             self.reached = False
             for i in xrange(timeout * loop_freq):
                 if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
-                    rospy.loginfo("position reached | seconds: {0} of {1}".format(
-                        i / loop_freq, timeout))
+                    rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
+                        k+1,n,i / loop_freq, timeout))
     #                self.reached = True
     #                rospy.sleep(2)
     
@@ -244,18 +222,18 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     #
     def posctl(self):
         
-        rospy.loginfo("Please arm the drone to set the EKF origin")
+#        rospy.loginfo("Please arm the drone to set the EKF origin")
         while(self.origin == None):
-            if self.state.armed:
-                self.center = GeoPointStamped()
-                rospy.loginfo("Waiting for EKF Origin fix")
-                rospy.sleep(10)
-                self.center.header.frame_id = "geo"
-                self.center.position.latitude = self.home_position.geo.latitude
-                self.center.position.longitude = self.home_position.geo.longitude
-                self.center.position.altitude = self.home_position.geo.altitude
-                self.center.header.stamp = rospy.Time.now()
-                self.origin_pub.publish(self.center)
+          #  if self.state.armed:
+            self.center = GeoPointStamped()
+            rospy.loginfo("Waiting for EKF Origin fix")
+            rospy.sleep(10)
+            self.center.header.frame_id = "geo"
+            self.center.position.latitude = self.home_position.geo.latitude
+            self.center.position.longitude = self.home_position.geo.longitude
+            self.center.position.altitude = self.home_position.geo.altitude
+            self.center.header.stamp = rospy.Time.now()
+            self.origin_pub.publish(self.center)
             
             rospy.sleep(1)
         rospy.loginfo("Origin fixed!")
@@ -341,12 +319,12 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                 self.local_position.pose.orientation.y,\
                 self.local_position.pose.orientation.z,)
                 self.yaw = rpy[2]
-                rospy.loginfo("yaw fixed to: {0} degrees".format(np.degrees(self.yaw)))
+#                rospy.loginfo("yaw fixed to: {0} degrees".format(np.degrees(self.yaw)))
 
-    #            # exempting failsafe from lost RC to allow offboard
-    #                rcl_except = ParamValue(1<<2, 0.0)
-    #                self.set_param("COM_RCL_EXCEPT", rcl_except, 5)                 # Specify modes in which RC loss is ignored and the failsafe action not triggered. 0: Mission, 1: Hold, 2: Offboard
-   #             self.set_mode("OFFBOARD", 5)
+#                # exempting failsafe from lost RC to allow offboard
+#                    rcl_except = ParamValue(1<<2, 0.0)
+#                    self.set_param("COM_RCL_EXCEPT", rcl_except, 5)                 # Specify modes in which RC loss is ignored and the failsafe action not triggered. 0: Mission, 1: Hold, 2: Offboard
+#                self.set_mode("OFFBOARD", 5)
                   
 
                 if self.reached == False and self.sampling_flag_data == 0:
@@ -359,9 +337,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.mission_waypoints_LLA[0][2], 60)
                     self.reached = True
                     self.setpoint = (self.mission_waypoints_ENU[0][0], self.mission_waypoints_ENU[0][1], 1.0, self.yaw)               # x, y, z, yaw
-#                    while self.sampling_flag_data == 0 and not rospy.is_shutdown():
-#                        self.inputs = self.DnH.PD_controller(self.setpoint)
-#                        self.send_setpoint_raw()
+
 
                 if self.reached == False and self.sampling_flag_data == 1:
                     self.reached = False
@@ -373,9 +349,6 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.mission_waypoints_LLA[1][2], 60)
                     self.reached = True
                     self.setpoint = (self.mission_waypoints_ENU[1][0], self.mission_waypoints_ENU[1][1], 1.0, self.yaw)               # x, y, z, yaw
-#                    while self.sampling_flag_data == 1 and not rospy.is_shutdown():
-#                        self.inputs = self.DnH.PD_controller(self.setpoint)
-#                        self.send_setpoint_raw()
 
                     
                 if self.reached == False and self.sampling_flag_data == 2:
@@ -388,9 +361,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.mission_waypoints_LLA[2][2], 60)
                     self.reached = True
                     self.setpoint = (self.mission_waypoints_ENU[2][0], self.mission_waypoints_ENU[2][1], 1.0, self.yaw)               # x, y, z, yaw
-#                    while self.sampling_flag_data == 2 and not rospy.is_shutdown():
-#                        self.inputs = self.DnH.PD_controller(self.setpoint)
-#                        self.send_setpoint_raw()
+
 
             # When using the Aurelia drone with the real sampler node.        
        

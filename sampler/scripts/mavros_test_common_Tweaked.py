@@ -7,7 +7,8 @@ from __future__ import division
                                                                                  # This naming convention informs the test runner about which methods represent tests.
 import rospy
 import math
-from geometry_msgs.msg import PoseStamped
+from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped, PoseWithCovarianceStamped
 from mavros_msgs.msg import Altitude, ExtendedState, HomePosition, ParamValue, State, \
                             WaypointList, RCIn
 from geographic_msgs.msg import GeoPointStamped
@@ -33,6 +34,7 @@ class MavrosTestCommonTweaked():
         self.local_position = PoseStamped()
         self.mission_wp = WaypointList()
         self.state = State()
+        self.local_from_global = Odometry()
         self.mav_type = None
         
         # Control switches
@@ -47,7 +49,7 @@ class MavrosTestCommonTweaked():
             key: False
             for key in [
                 'alt', 'ext_state', 'local_pos',
-                'mission_wp', 'state', 'imu', 'global_pos', 'home_pos'
+                'mission_wp', 'state', 'imu', 'global_pos', 'home_pos', 'local_from_global'
             ]
         }
         #'global_pos', 'home_pos',                                              # Uncomment when flying with GPS
@@ -93,6 +95,7 @@ class MavrosTestCommonTweaked():
         self.local_pos_sub = rospy.Subscriber('mavros/local_position/pose',
                                               PoseStamped,
                                               self.local_position_callback)
+        self.local_from_global_sub = rospy.Subscriber('mavros/global_position/local', Odometry,self.local_from_global_callback)
         self.mission_wp_sub = rospy.Subscriber('mavros/mission/waypoints',\
                                                WaypointList, self.mission_wp_callback)
         self.state_sub = rospy.Subscriber('mavros/state', State,
@@ -203,6 +206,11 @@ class MavrosTestCommonTweaked():
 
         if not self.sub_topics_ready['local_pos']:
             self.sub_topics_ready['local_pos'] = True                           # sub_topics_ready['local_pos'] will become True once the altitude callback is called.
+
+    def local_from_global_callback(self, data):
+        self.local_from_global = data
+        if not self.sub_topics_ready['local_from_global']:
+            self.sub_topics_ready['local_from_global'] = True
 
     def mission_wp_callback(self, data):
         if self.mission_wp.current_seq != data.current_seq:
@@ -486,6 +494,8 @@ class MavrosTestCommonTweaked():
         rospy.loginfo("home_position:\n{}".format(self.home_position))
         rospy.loginfo("========================")
         rospy.loginfo("local_position:\n{}".format(self.local_position))
+        rospy.loginfo("========================")
+        rospy.loginfo("local_from_global:\n{}".format(self.local_from_global))
         rospy.loginfo("========================")
         rospy.loginfo("mission_wp:\n{}".format(self.mission_wp))
         rospy.loginfo("========================")
