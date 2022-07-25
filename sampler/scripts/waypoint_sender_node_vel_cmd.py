@@ -102,8 +102,9 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         rate = rospy.Rate(30)  # Hz
         
         while not rospy.is_shutdown():
-        
-            self.inputs = self.DnH.PD_controller(self.setpoint)
+            
+            if self.start:
+                self.inputs = self.DnH.PD_controller(self.setpoint)
             self.cmd_msg.velocity.x = self.inputs[0]
             self.cmd_msg.velocity.y = self.inputs[1]
             self.cmd_msg.velocity.z = self.inputs[2]
@@ -308,7 +309,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         
         while not rospy.is_shutdown():
 
-            rate = rospy.Rate(10)  # Hz
+            rate = rospy.Rate(1)  # Hz
             
             if self.start == True:
 #                self.log_topic_vars()                                                # Logs all the important topics on the console.
@@ -341,9 +342,9 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
 
                 if self.reached == False and self.sampling_flag_data == 1:
                     self.reached = False
-                    self.reach_position(self.global_position.latitude,\
-                                        self.global_position.longitude,\
-                                        self.mission_waypoints_LLA[1][2], 60)
+#                    self.reach_position(self.global_position.latitude,\
+#                                        self.global_position.longitude,\
+#                                        self.mission_waypoints_LLA[1][2], 60)
                     self.reach_position(self.mission_waypoints_LLA[1][0],\
                                         self.mission_waypoints_LLA[1][1],\
                                         self.mission_waypoints_LLA[1][2], 60)
@@ -353,9 +354,9 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                     
                 if self.reached == False and self.sampling_flag_data == 2:
                     self.reached = False
-                    self.reach_position(self.global_position.latitude,\
-                                        self.global_position.longitude,\
-                                        self.mission_waypoints_LLA[2][2], 60)
+#                    self.reach_position(self.global_position.latitude,\
+#                                        self.global_position.longitude,\
+#                                        self.mission_waypoints_LLA[2][2], 60)
                     self.reach_position(self.mission_waypoints_LLA[2][0],\
                                         self.mission_waypoints_LLA[2][1],\
                                         self.mission_waypoints_LLA[2][2], 60)
@@ -408,6 +409,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     
             else:
                 if self.state.mode == "OFFBOARD":
+                    rospy.loginfo("mission stopped")
                     self.set_mode("POSCTL", 5)
             
             rate.sleep()
@@ -417,7 +419,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         while not rospy.is_shutdown():
             rate = rospy.Rate(1)  # Hz
             if self.reached:
-                rospy.loginfo("flag changed")
+                rospy.loginfo("waypoint reached. flag will change after 30 seconds.")
                 rospy.sleep(30)
                 self.sampling_flag_data += 1
                 self.reached = False
