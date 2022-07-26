@@ -52,10 +52,10 @@ class sonar():
         
         distance_raw = pulse_duration * 170    # 2s = vt, therefore, s = (v/2)*t. Speed of sound is v=340 m/s or 34000 cm/s. Therefore, v/2 = 17000 cm/s
         if pulse_duration >=0.01746:
-            #print("sonar time out")
+            rospy.logwarn("sonar time out")
             return 0
         elif distance_raw > 3 or distance_raw<=0:
-            #print("sonar out of range")
+            rospy.logwarn("sonar out of range")
             return 0
         self.distance = round(distance_raw, 3)
         return 1

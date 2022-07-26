@@ -21,7 +21,12 @@ from six.moves import xrange
 
 class MavrosTestCommonTweaked():
 
-    _RC_TRIGGER_MISSION = 4           # 2006 - 1494 - 982
+# Auto Channel for F550
+#    _RC_TRIGGER_MISSION = 4           # 2006 - 1494 - 982
+#    _RC_HIGH_MISSION = 1494
+
+# Auto Channel for Aurelia
+    _RC_TRIGGER_MISSION = 10           # 2005 - 1494 - 982
     _RC_HIGH_MISSION = 1494
     
     def __init__(self, *args):

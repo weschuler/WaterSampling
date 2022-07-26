@@ -104,7 +104,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         while not rospy.is_shutdown():
             
             if self.start:
-                self.inputs = self.DnH.PD_controller(self.setpoint)
+          	    self.inputs = self.DnH.PD_controller(self.setpoint)
             self.cmd_msg.velocity.x = self.inputs[0]
             self.cmd_msg.velocity.y = self.inputs[1]
             self.cmd_msg.velocity.z = self.inputs[2]
@@ -337,7 +337,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.mission_waypoints_LLA[0][1],\
                                         self.mission_waypoints_LLA[0][2], 60)
                     self.reached = True
-                    self.setpoint = (self.mission_waypoints_ENU[0][0], self.mission_waypoints_ENU[0][1], 1.0, self.yaw)               # x, y, z, yaw
+                    self.setpoint = (self.mission_waypoints_ENU[0][0], self.mission_waypoints_ENU[0][1], 2.0, self.yaw)               # x, y, z, yaw
 
 
                 if self.reached == False and self.sampling_flag_data == 1:
@@ -349,7 +349,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.mission_waypoints_LLA[1][1],\
                                         self.mission_waypoints_LLA[1][2], 60)
                     self.reached = True
-                    self.setpoint = (self.mission_waypoints_ENU[1][0], self.mission_waypoints_ENU[1][1], 1.0, self.yaw)               # x, y, z, yaw
+                    self.setpoint = (self.mission_waypoints_ENU[1][0], self.mission_waypoints_ENU[1][1], 2.0, self.yaw)               # x, y, z, yaw
 
                     
                 if self.reached == False and self.sampling_flag_data == 2:
@@ -361,7 +361,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.mission_waypoints_LLA[2][1],\
                                         self.mission_waypoints_LLA[2][2], 60)
                     self.reached = True
-                    self.setpoint = (self.mission_waypoints_ENU[2][0], self.mission_waypoints_ENU[2][1], 1.0, self.yaw)               # x, y, z, yaw
+                    self.setpoint = (self.mission_waypoints_ENU[2][0], self.mission_waypoints_ENU[2][1], 2.0, self.yaw)               # x, y, z, yaw
 
 
             # When using the Aurelia drone with the real sampler node.        

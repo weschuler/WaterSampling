@@ -56,7 +56,7 @@ class PD_Controller_Class(MavrosTestCommonTweaked):
         self.pos_world[2,0] = self.EKF.estimate_z.data
         rp.loginfo("Using EKF Altitude")
     else:
-        self.pos_world[2,0] = self.local_position.pose.position.z        # position z in world frame
+        self.pos_world[2,0] = self.local_from_global.pose.pose.position.z        # position z in world frame
 #        rp.loginfo("Using GPS Altitude")
     self.quat[0] = self.local_position.pose.orientation.w
     self.quat[1] = self.local_position.pose.orientation.x
