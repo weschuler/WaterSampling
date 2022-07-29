@@ -35,7 +35,6 @@ class PD_Controller_Class(MavrosTestCommonTweaked):
     self.prev_error_q = 0.0
     
     self.inlet_depth = 0.0
-    self.sampling_depth = 0.2
  
   def clip_input(self, value):
     if value >= 1.0:

@@ -134,7 +134,7 @@ class MavrosTestCommonTweaked():
         else:
             self.start = False
         
-        if msg.channels[self._RC_OFFBOARD] != self._RC_HIGH_OFFBOARD:
+        if msg.channels[self._RC_OFFBOARD] != self._RC_HIGH_OFFBOARD and self.state.mode == "OFFBOARD":
             self.set_mode("POSCTL", 5)                                      # Switches to POSCTL when the offboard switch is off.
     
     def joyCallback(self, msg):
