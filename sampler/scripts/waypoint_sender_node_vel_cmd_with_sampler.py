@@ -67,7 +67,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         
         self.radius = 0.5
         self.yaw = 0
-        self.setpoint = (self.local_position.pose.position.x, self.local_position.pose.position.y, self.local_from_global.pose.pose.position.z, self.yaw)
+        self.setpoint = [self.local_position.pose.position.x, self.local_position.pose.position.y, self.local_from_global.pose.pose.position.z, self.yaw]
         self.reached = False
         self.mission_end = False
         self.sampling_flag_data = 0
@@ -123,7 +123,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             self.setpoint_msg.position.x = self.setpoint[0]
             self.setpoint_msg.position.y = self.setpoint[1]
             self.setpoint_msg.position.z = self.setpoint[2]
-            self.setpoint_msg.yaw = np.deg2rad(self.setpoint[3])
+            self.setpoint_msg.yaw = np.rad2deg(self.setpoint[3])
             self.setpoint_pub.publish(self.setpoint_msg)
             
         
@@ -209,7 +209,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             # does it reach the position in 'timeout' seconds?
     
             for k in range(n):
-                self.setpoint = (xx[k], yy[k], target[2,0], self.yaw)               # x, y, z, yaw
+                self.setpoint = [xx[k], yy[k], target[2,0], self.yaw]               # x, y, z, yaw
                 
                 loop_freq = 5  # Hz
                 rate = rospy.Rate(loop_freq)
@@ -240,10 +240,10 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             self.setpoint[2] = self.setpoint[2] - 0.2
             
         elif self.EKF.estimate_z.data < 0.5:
-            self.setpoint[2] = self.setpoint[2] + 1.0
+            self.setpoint[2] = self.mission_waypoints_ENU[0][2]
             rospy.logerr("Oops! Dangerous Altitude, going up")
         elif self.mission_end:
-            self.setpoint[2] = self.setpoint[2] + 1.0
+            self.setpoint[2] = self.mission_waypoints_ENU[0][2]
             rospy.loginfo("Mission ended, going up")
         
         loop_freq = 5  # Hz
