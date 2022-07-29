@@ -28,6 +28,9 @@ class MavrosTestCommonTweaked():
 # Auto Channel for Aurelia
     _RC_TRIGGER_MISSION = 10           # 2005 - 1494 - 982
     _RC_HIGH_MISSION = 1494
+    _RC_OFFBOARD = 14
+    _RC_HIGH_OFFBOARD = 2005            # 982 - 2005
+    
     
     def __init__(self, *args):
         
@@ -130,6 +133,9 @@ class MavrosTestCommonTweaked():
             self.start = True
         else:
             self.start = False
+        
+        if msg.channels[self._RC_OFFBOARD] != self._RC_HIGH_OFFBOARD:
+            self.set_mode("POSCTL", 5)                                      # Switches to POSCTL when the offboard switch is off.
     
     def joyCallback(self, msg):
         self.arm_bttn = msg.buttons[5]                  # RB button

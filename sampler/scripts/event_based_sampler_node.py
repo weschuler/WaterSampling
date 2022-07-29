@@ -64,7 +64,7 @@ class SamplerNode():
         self.sampling_depth = 0.2
         self.fluor_median = 0
         self.depth_flag = 0
-        self.fluor_trigger = 100.0
+        self.fluor_trigger = 100.0                                              # Need to change this value when going out in the real field.
 
         # Fluorescence sensor
         self.fluorescence_readings = []
@@ -153,8 +153,8 @@ class SamplerNode():
                 elif self.sampling_flag == 1 and self.sampler_A.is_full == True:
                     self.sampling_pump_a.stop()
                     if(self.depth_flag == 1):
-                        self.sampling_flag = 2
-                        self.depth_flag = 0
+                        self.sampling_flag = 2                                  # Checks if the depth sensor went out of water after sampler A is full.
+                        self.depth_flag = 0                                     # The sampling flag is incremented only when the depth sensor goes out of water.
                             
                 
                 #Sampler B    
@@ -176,7 +176,9 @@ class SamplerNode():
                     
                 elif self.sampling_flag == 3 and self.sampler_C.is_full == True:
                     self.sampling_pump_c.stop()
-                    self.depth_flag = 0
+                    if(self.depth_flag == 1):
+                        self.sampling_flag = 4
+                        self.depth_flag = 0
 
                 self.depth_flag = 0
             else:
