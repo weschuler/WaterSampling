@@ -187,6 +187,20 @@ class SamplerNode():
                 self.sampling_pump_a.stop()
                 self.sampling_pump_b.stop()
                 self.sampling_pump_c.stop()
+                
+                # flushing routine after mission
+                if self.sampling_flag == 4:
+                    self.master_pump.start()
+                    self.sampling_pump_a.start()
+                    self.sampling_pump_b.start()
+                    self.sampling_pump_c.start()
+                    
+                    rp.sleep(10)            # Flushing duration = 10 seconds
+                    
+                    self.master_pump.stop()
+                    self.sampling_pump_a.stop()
+                    self.sampling_pump_b.stop()
+                    self.sampling_pump_c.stop()
         else:
             self.sampling_flag = 0
             self.main_channel.is_full = False
