@@ -19,11 +19,10 @@ class JoyRCNode():
     rp.loginfo('Checking that services are available')
     rp.wait_for_service('/mavros/set_mode')
     rp.wait_for_service('/mavros/cmd/arming')
-<<<<<<< HEAD
    # rp.wait_for_service('/enable_controller')
-=======
+
     rp.wait_for_service('/enable_controller')
->>>>>>> 80532b8484937471a5aa96b3345bea217bdf0b80
+
     rp.loginfo('MavROS and NMPC services are available')
 
     # Velocity cmds
@@ -46,11 +45,10 @@ class JoyRCNode():
     # Service clients
     self.set_mode_serv = rp.ServiceProxy('/mavros/set_mode', SetMode)
     self.arm_serv = rp.ServiceProxy('/mavros/cmd/arming', CommandBool)
-<<<<<<< HEAD
   #  self.ctrl_serv = rp.ServiceProxy('/enable_controller', SetBool)
-=======
+
     self.ctrl_serv = rp.ServiceProxy('/enable_controller', SetBool)
->>>>>>> 80532b8484937471a5aa96b3345bea217bdf0b80
+
 
     # Subscribers
     self.state_sub = rp.Subscriber('/mavros/state', State, self.stateCallback, queue_size=1)
@@ -70,7 +68,6 @@ class JoyRCNode():
     self.mode = msg.mode
 
   def joyCallback(self, msg):
-<<<<<<< HEAD
     self.vel_x_cmd =  msg.axes[4]
     self.vel_y_cmd =  msg.axes[3]
     self.vel_z_cmd = msg.axes[1]
@@ -79,7 +76,6 @@ class JoyRCNode():
     self.arm_bttn = msg.buttons[5]
     self.ofb_bttn = msg.buttons[4]
 #    self.mpc_bttn = msg.buttons[2]
-=======
     self.vel_x_cmd =  msg.axes[1]
     self.vel_y_cmd =  msg.axes[0]
     self.vel_z_cmd = -msg.axes[2]
@@ -88,7 +84,6 @@ class JoyRCNode():
     self.arm_bttn = msg.buttons[0]
     self.ofb_bttn = msg.buttons[6]
     self.mpc_bttn = msg.buttons[2]
->>>>>>> 80532b8484937471a5aa96b3345bea217bdf0b80
 
   def commandPublisher(self,):
     r = rp.Rate(self.rate)
@@ -118,21 +113,20 @@ class JoyRCNode():
         if self.arm_bttn == 1.0 and not self.armed:
           self.arm_serv(True)
         
-<<<<<<< HEAD
+
         #if self.mpc_bttn == 1.0 and not self.mpc_enabled:
         #  self.ctrl_serv(True)
         #  self.mpc_enabled = True
         #elif self.mpc_bttn == 0.0 and self.mpc_enabled:
         #  self.ctrl_serv(False)
         #  self.mpc_enabled = False
-=======
+
         if self.mpc_bttn == 1.0 and not self.mpc_enabled:
           self.ctrl_serv(True)
           self.mpc_enabled = True
         elif self.mpc_bttn == 0.0 and self.mpc_enabled:
           self.ctrl_serv(False)
           self.mpc_enabled = False
->>>>>>> 80532b8484937471a5aa96b3345bea217bdf0b80
 
         if self.armed and not self.mpc_enabled:
           cmd_msg.velocity.x = self.vel_x_cmd
@@ -150,8 +144,5 @@ class JoyRCNode():
 
 
 if __name__ == '__main__':
-<<<<<<< HEAD
     JoyRCNode(20)
-=======
-    JoyRCNode(30)
->>>>>>> 80532b8484937471a5aa96b3345bea217bdf0b80
+

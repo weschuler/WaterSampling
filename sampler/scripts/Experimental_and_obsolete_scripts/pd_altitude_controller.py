@@ -122,6 +122,16 @@ class JoyRCNode():
 #    self.quat[2] = msg.pose.pose.orientation.y
 #    self.quat[3] = msg.pose.pose.orientation.z
     
+  def clip_input(self, value):
+    if value >= 1.0:
+      value = 1.0
+    elif value <= -1.0:
+      value = -1.0
+    else:
+      value = value
+      
+    return value
+
   def PD_controller(self):
     
     Kp_z = 1.8024           # Proportional gain for z input
@@ -149,10 +159,10 @@ class JoyRCNode():
     input_world = np.matrix([x_input_world, y_input_world, z_input_world]).T
     input_body = R_B_W*input_world                                              # rotated the inputs in world frame to body frame
     
-    self.vel_x_input = input_body[0,0]
-    self.vel_y_input = input_body[1,0]
-    self.vel_z_input = input_body[2,0]
-    self.vel_q_input = q_input_world
+    self.vel_x_input = self.clip_input(input_body[0,0])
+    self.vel_y_input = self.clip_input(input_body[1,0])
+    self.vel_z_input = self.clip_input(input_body[2,0])
+    self.vel_q_input = self.clip_input(q_input_world)
     
     self.prev_error_x = self.error_x
     self.prev_error_y = self.error_y 
