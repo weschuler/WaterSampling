@@ -250,7 +250,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         rate = rospy.Rate(loop_freq)
         for i in xrange(timeout * loop_freq):
             dz = abs(self.setpoint[2] - self.local_from_global.pose.pose.position.z)
-            if dz < 0.3:
+            if dz < 0.1:
                 break
 
 
