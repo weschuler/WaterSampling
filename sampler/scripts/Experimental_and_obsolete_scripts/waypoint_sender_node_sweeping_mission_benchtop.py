@@ -71,8 +71,9 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.reached = False
         self.mission_end = False
         self.sampling_flag_data = 0
-        self.sampling_depth = 0.2
+        self.sampling_depth = 0.04
         self.inputs = [0,0,0,0]
+        self.counter = 0
         
 #        self.pos_setpoint_pub = rospy.Publisher(
 #            'mavros/setpoint_position/local', PoseStamped, queue_size=1)
@@ -100,8 +101,6 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         
         self.depth_check_thread = Thread(target=self.depth_check)
         self.depth_check_thread.start()
-#        self.clk_thread = Thread(target=self.clock)
-#        self.clk_thread.start()
         
     #
 #%%    # Helper methods
@@ -184,48 +183,49 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         current = self.u.geo2enu(self.global_position.latitude, self.global_position.longitude, self.global_position.altitude)
         dxy, dz = self.distance_to_wp(x,y,z)
         
-        if not dxy <= self.radius:
     # Generate intermediate waypoints every 1.5 meters apart        
-            n = int(dxy/1.5)
-            if n < 2:
-                n =  2
-            xx = np.linspace(self.local_position.pose.position.x, target[0,0], n)
-            yy = np.linspace(self.local_position.pose.position.y, target[1,0], n)
-    
-            rospy.loginfo("========================")
-            rospy.loginfo(
-                "attempting to reach position | latitude: {0}, longitude: {1}, altitude: {2} | current position latitude: {3}, longitude: {4}, altitude: {5}".
-                format(x, y, z, self.global_position.latitude,
-                       self.global_position.longitude,
-                       self.global_position.altitude))
-    
-            # does it reach the position in 'timeout' seconds?
-    
-            for k in range(n):
-                self.setpoint = [xx[k], yy[k], target[2,0], self.yaw]               # x, y, z, yaw
-                
-                loop_freq = 5  # Hz
-                rate = rospy.Rate(loop_freq)
-    
-                for i in xrange(timeout * loop_freq):
-                    if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
-                        rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
-                            k+1,n,i / loop_freq, timeout))
-        
-                        break
-        
-        
-                    try:
-                        rate.sleep()
-                    except rospy.ROSException as e:
-                        rospy.logerr(e)
+        n = int(dxy/1.5)
+        if n < 2:
+            n =  2
+        xx = np.linspace(self.local_position.pose.position.x, target[0,0], n)
+        yy = np.linspace(self.local_position.pose.position.y, target[1,0], n)
+
+        rospy.loginfo("========================")
+        rospy.loginfo(
+            "attempting to reach position | latitude: {0}, longitude: {1}, altitude: {2} | current position latitude: {3}, longitude: {4}, altitude: {5}".
+            format(x, y, z, self.global_position.latitude,
+                   self.global_position.longitude,
+                   self.global_position.altitude))
+
+        # does it reach the position in 'timeout' seconds?
+
+        for k in range(n):
+            self.setpoint = [xx[k], yy[k], target[2,0], self.yaw]               # x, y, z, yaw
             
-            if self.is_at_position(target[0,0], target[1,0], target[2,0], self.radius):
-                self.reached = True
-                rospy.loginfo("Waypoint Achieved, descending to water level")
-            else:
-                self.reached = False
-                rospy.logerr("Failed to reach waypoint")
+            loop_freq = 5  # Hz
+            rate = rospy.Rate(loop_freq)
+
+            for i in xrange(timeout * loop_freq):
+                if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
+                    rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
+                        k+1,n,i / loop_freq, timeout))
+    
+                    break
+    
+    
+                try:
+                    rate.sleep()
+                except rospy.ROSException as e:
+                    rospy.logerr(e)
+        
+        if self.is_at_position(target[0,0], target[1,0], target[2,0], self.radius):
+            self.reached = True
+            rospy.loginfo("Waypoint Achieved, descending to water level")
+        else:
+            self.reached = False
+            rospy.logerr("Failed to reach waypoint")
+        
+        self.counter = self.counter+1
 
     def sweep_position(self, x, y, timeout):
         """
@@ -263,11 +263,13 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             rate = rospy.Rate(loop_freq)
 
             for i in xrange(timeout * loop_freq):
-                if self.is_at_position(xx[k], yy[k], self.setpoint[2], self.radius):
+                if self.is_at_position(xx[k], yy[k], self.setpoint[2], self.radius) and self.inlet_depth >= self.sampling_depth:
                     rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
                         k+1,n,i / loop_freq, timeout))
     
                     break
+                elif self.inlet_depth < self.sampling_depth:
+                    self.descend(10)
     
                 try:
                     rate.sleep()
@@ -278,10 +280,6 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     def descend(self, timeout):
         if self.inlet_depth < self.sampling_depth and self.EKF.estimate_z.data > 0.5:
             self.setpoint[2] = self.setpoint[2] - 0.2
-            
-        elif self.EKF.estimate_z.data < 0.5:
-            self.setpoint[2] = self.mission_waypoints_ENU[0][2]
-            rospy.logerr("Oops! Dangerous Altitude, going up")
         
         loop_freq = 5  # Hz
         rate = rospy.Rate(loop_freq)
@@ -388,16 +386,17 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                 
                 if self.sampling.flag.data == 0 and self.sampling.main_channel.data == False:
                     # GOTO waypoint 1
-                    self.reach_position(self.mission_waypoints_LLA[0][0],\
+                    if self.counter == 0:
+                        self.reach_position(self.mission_waypoints_LLA[0][0],\
                                             self.mission_waypoints_LLA[0][1],\
-                                            self.mission_waypoints_LLA[0][2], 20)
+                                            self.mission_waypoints_LLA[0][2], 2)
                     self.descend(10)                                        # self.descend(timeout)
                     
                 elif self.sampling.main_channel.data == True:
                     # SWEEP
                     for i in range(len(self.mission_waypoints_ENU)-1):
                         self.sweep_position(self.mission_waypoints_ENU[i+1][0],\
-                                            self.mission_waypoints_ENU[i+1][1], 20)
+                                            self.mission_waypoints_ENU[i+1][1], 2)
                         if i == len(self.mission_waypoints_ENU)-1:
                             self.mission_end = True
                    
@@ -411,9 +410,10 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     def depth_check(self):
         while not rospy.is_shutdown():
             rate = rospy.Rate(5)  # Hz
-            if self.sampling.main_channel.data == True and self.mission_end == False:
-                self.descend(10)
-            elif self.sampling.main_channel.data == True and self.mission_end:
+            if self.sampling.main_channel.data == True and self.EKF.estimate_z.data < 0.5:
+                self.setpoint[2] = self.mission_waypoints_ENU[0][2]
+                rospy.logerr("Oops! Dangerous Altitude, going up")
+            if self.sampling.main_channel.data == True and self.mission_end:
                 self.setpoint[2] = self.mission_waypoints_ENU[0][2]
                 rospy.loginfo("Mission ended, going up")
                 break
