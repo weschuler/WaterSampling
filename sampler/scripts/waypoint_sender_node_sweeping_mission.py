@@ -100,8 +100,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         
         self.depth_check_thread = Thread(target=self.depth_check)
         self.depth_check_thread.start()
-#        self.clk_thread = Thread(target=self.clock)
-#        self.clk_thread.start()
+
         
     #
 #%%    # Helper methods
@@ -263,11 +262,13 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             rate = rospy.Rate(loop_freq)
 
             for i in xrange(timeout * loop_freq):
-                if self.is_at_position(xx[k], yy[k], self.setpoint[2], self.radius):
+                if self.is_at_position(xx[k], yy[k], self.setpoint[2], self.radius) and self.inlet_depth >= self.sampling_depth:
                     rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
                         k+1,n,i / loop_freq, timeout))
     
                     break
+                elif self.inlet_depth < self.sampling_depth:
+                    self.descend(10)
     
                 try:
                     rate.sleep()
@@ -278,10 +279,6 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     def descend(self, timeout):
         if self.inlet_depth < self.sampling_depth and self.EKF.estimate_z.data > 0.5:
             self.setpoint[2] = self.setpoint[2] - 0.2
-            
-        elif self.EKF.estimate_z.data < 0.5:
-            self.setpoint[2] = self.mission_waypoints_ENU[0][2]
-            rospy.logerr("Oops! Dangerous Altitude, going up")
         
         loop_freq = 5  # Hz
         rate = rospy.Rate(loop_freq)
@@ -411,8 +408,9 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     def depth_check(self):
         while not rospy.is_shutdown():
             rate = rospy.Rate(5)  # Hz
-            if self.sampling.main_channel.data == True and self.mission_end == False:
-                self.descend(10)
+            if self.sampling.main_channel.data == True and self.EKF.estimate_z.data < 0.5:
+                self.setpoint[2] = self.mission_waypoints_ENU[0][2]
+                rospy.logerr("Oops! Dangerous Altitude, going up")
             elif self.sampling.main_channel.data == True and self.mission_end:
                 self.setpoint[2] = self.mission_waypoints_ENU[0][2]
                 rospy.loginfo("Mission ended, going up")
