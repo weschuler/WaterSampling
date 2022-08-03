@@ -59,7 +59,7 @@ class sonar():
             return 0
         self.distance = round(distance_raw, 3)
         return 1
-        #print ('Distance : %f cm'%distance)                   # Takes a reading 15 times per second. That means duration for 1 data point is 66.7 ms.
+        print ('Distance : %f cm'%distance)                   # Takes a reading 15 times per second. That means duration for 1 data point is 66.7 ms.
         
  
         
@@ -76,6 +76,7 @@ class sonar():
                 self.distance_publisher.publish(sonar_msg)
             else:
                 rospy.logwarn("Sensor read failed. Will try again")
+                pass
                 
             r.sleep()
         

@@ -59,6 +59,7 @@
 /sensor/ref
 /sensor/fluor
 /sensor/temp
+/sensor/error
 
 "
   />

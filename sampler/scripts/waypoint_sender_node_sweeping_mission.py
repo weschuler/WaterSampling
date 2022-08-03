@@ -65,7 +65,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         
         self.setpoint_msg = Setpoint()
         
-        self.radius = 0.2
+        self.radius = 0.5
         self.yaw = 0
         self.setpoint = [self.local_position.pose.position.x, self.local_position.pose.position.y, self.local_from_global.pose.pose.position.z, self.yaw]
         self.reached = False
@@ -395,8 +395,8 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                     for i in range(len(self.mission_waypoints_ENU)-1):
                         self.sweep_position(self.mission_waypoints_ENU[i+1][0],\
                                             self.mission_waypoints_ENU[i+1][1], 20)
-                        if i == len(self.mission_waypoints_ENU)-1:
-                            self.mission_end = True
+                        rospy.loginfo("Now at waypoint {0}".format(i+1))
+                    self.mission_end = True
                    
             else:
                 if self.state.mode == "OFFBOARD":
