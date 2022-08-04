@@ -72,6 +72,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.mission_end = False
         self.sampling_flag_data = 0
         self.sampling_depth = 0.2
+        self.danger_alt = 0.5                                   # Dangerous distance above the water surface.
         self.inputs = [0,0,0,0]
         
 #        self.pos_setpoint_pub = rospy.Publisher(
@@ -236,10 +237,10 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
 
 
     def descend(self, timeout):
-        if self.inlet_depth < self.sampling_depth and self.EKF.estimate_z.data > 0.5:
+        if self.inlet_depth < self.sampling_depth and self.EKF.estimate_z.data > self.danger_alt:
             self.setpoint[2] = self.setpoint[2] - 0.2
             
-        elif self.EKF.estimate_z.data < 0.5:
+        elif self.EKF.estimate_z.data < self.danger_alt:
             self.setpoint[2] = self.mission_waypoints_ENU[0][2]
             rospy.logerr("Oops! Dangerous Altitude, going up")
         elif self.mission_end:
@@ -402,20 +403,20 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                     # GOTO waypoint 1
                     self.reach_position(self.mission_waypoints_LLA[0][0],\
                                             self.mission_waypoints_LLA[0][1],\
-                                            self.mission_waypoints_LLA[0][2], 20)
+                                            self.mission_waypoints_LLA[0][2], 60)
 
                     
                 elif self.sampling.flag.data == 1 and self.sampling.sampler_A.data == True:
                     # GOTO waypoint 2
                     self.reach_position(self.mission_waypoints_LLA[1][0],\
                                         self.mission_waypoints_LLA[1][1],\
-                                        self.mission_waypoints_LLA[1][2], 20)
+                                        self.mission_waypoints_LLA[1][2], 60)
                     
                 elif self.sampling.flag.data == 2 and self.sampling.sampler_B.data == True:
                     # GOTO waypoint 3
                     self.reach_position(self.mission_waypoints_LLA[2][0],\
                                         self.mission_waypoints_LLA[2][1],\
-                                        self.mission_waypoints_LLA[2][2], 20)
+                                        self.mission_waypoints_LLA[2][2], 60)
                     
                 elif self.sampling.flag.data == 3 and self.sampling.sampler_C.data == True:
                     # Ascend and end mission

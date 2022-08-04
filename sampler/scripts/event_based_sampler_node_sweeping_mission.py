@@ -54,6 +54,7 @@ class SamplerNode():
         self.sampler_C = Bottle(self._BOTTLE_C)
         
         self.sampling_flag = 0
+        self.counter = 0
         
         self.enable_sampler_main = False
         self.enable_sampler_C = False
@@ -126,13 +127,33 @@ class SamplerNode():
 
     def stateMachine(self,):
         if self.enable_sampler_main == True:
+        
+# Flushing routine-------------------------------------------------------------
+            if self.counter == 0:
+                rp.loginfo("Starting the flushing routine")
+                self.master_pump.start()
+                self.sampling_pump_a.start()
+                self.sampling_pump_b.start()
+                self.sampling_pump_c.start()
+                
+                rp.sleep(10)            # Flushing duration = 10 seconds
+                
+                self.master_pump.stop()
+                self.sampling_pump_a.stop()
+                self.sampling_pump_b.stop()
+                self.sampling_pump_c.stop()
+                
+                self.counter = self.counter+1
+                rp.loginfo("The lines have been flushed")
+# Flushing routine ends--------------------------------------------------------
+
             if self.inlet_depth >= self.sampling_depth or self.enable_sampler_C == True:   #self.enable_sampler_C is the RC switch
                 self.master_pump.start()
                 
                 #%% Check if there is water running in the circuit------------------------------
                 
                 if self.main_channel.is_full == True:
-                    SamplerNode.mode_sendor(self, 1)        # publishes mode = 1 to the /sensor/mode topic to start getting fluorescence measurements               
+                    SamplerNode.mode_sendor(self, 1)        # publishes mode = 1 to the /sensor/mode topic to start getting fluorescence measurements         
                 
                 #%% Calculate median of fluorescence window-------------------------------------
                 if(len(self.fluorescence_readings) > 0):

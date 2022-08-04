@@ -72,6 +72,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.mission_end = False
         self.sampling_flag_data = 0
         self.sampling_depth = 0.2
+        self.danger_alt = 0.5
         self.inputs = [0,0,0,0]
         
 #        self.pos_setpoint_pub = rospy.Publisher(
@@ -277,7 +278,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
 
 
     def descend(self, timeout):
-        if self.inlet_depth < self.sampling_depth and self.EKF.estimate_z.data > 0.5:
+        if self.inlet_depth < self.sampling_depth and self.EKF.estimate_z.data > self.danger_alt :
             self.setpoint[2] = self.setpoint[2] - 0.2
         
         loop_freq = 5  # Hz
@@ -387,16 +388,17 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                     # GOTO waypoint 1
                     self.reach_position(self.mission_waypoints_LLA[0][0],\
                                             self.mission_waypoints_LLA[0][1],\
-                                            self.mission_waypoints_LLA[0][2], 20)
+                                            self.mission_waypoints_LLA[0][2], 60)
                     self.descend(10)                                        # self.descend(timeout)
                     
                 elif self.sampling.main_channel.data == True:
                     # SWEEP
                     for i in range(len(self.mission_waypoints_ENU)-1):
                         self.sweep_position(self.mission_waypoints_ENU[i+1][0],\
-                                            self.mission_waypoints_ENU[i+1][1], 20)
+                                            self.mission_waypoints_ENU[i+1][1], 60)
                         rospy.loginfo("Now at waypoint {0}".format(i+1))
                     self.mission_end = True
+                    rospy.sleep(10)
                    
             else:
                 if self.state.mode == "OFFBOARD":
@@ -408,7 +410,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     def depth_check(self):
         while not rospy.is_shutdown():
             rate = rospy.Rate(5)  # Hz
-            if self.sampling.main_channel.data == True and self.EKF.estimate_z.data < 0.5:
+            if self.sampling.main_channel.data == True and self.EKF.estimate_z.data < self.danger_alt :
                 self.setpoint[2] = self.mission_waypoints_ENU[0][2]
                 rospy.logerr("Oops! Dangerous Altitude, going up")
             elif self.sampling.main_channel.data == True and self.mission_end:
