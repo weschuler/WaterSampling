@@ -256,6 +256,9 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         # does it reach the position in 'timeout' seconds?
 
         for k in range(n):
+            if self.start == False:
+                break
+            
             self.setpoint[0] = xx[k]
             self.setpoint[1] = yy[k]
             
@@ -263,6 +266,8 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             rate = rospy.Rate(loop_freq)
 
             for i in xrange(timeout * loop_freq):
+                if self.start == False:
+                    break                
                 if self.is_at_position(xx[k], yy[k], self.setpoint[2], self.radius) and self.inlet_depth >= self.sampling_depth:
                     rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
                         k+1,n,i / loop_freq, timeout))
