@@ -99,8 +99,8 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.ctl_thread = Thread(target=self.posctl)
         self.ctl_thread.start()
         
-#        self.clk_thread = Thread(target=self.clock)
-#        self.clk_thread.start()
+        self.depth_check_thread = Thread(target=self.depth_check)
+        self.depth_check_thread.start()
         
     #
 #%%    # Helper methods
@@ -239,19 +239,12 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
     def descend(self, timeout):
         if self.inlet_depth < self.sampling_depth and self.EKF.estimate_z.data > self.danger_alt:
             self.setpoint[2] = self.setpoint[2] - 0.2
-            
-        elif self.EKF.estimate_z.data < self.danger_alt:
-            self.setpoint[2] = self.mission_waypoints_ENU[0][2]
-            rospy.logerr("Oops! Dangerous Altitude, going up")
-        elif self.mission_end:
-            self.setpoint[2] = self.mission_waypoints_ENU[0][2]
-            rospy.loginfo("Mission ended, going up")
         
         loop_freq = 5  # Hz
         rate = rospy.Rate(loop_freq)
         for i in xrange(timeout * loop_freq):
             dz = abs(self.setpoint[2] - self.local_from_global.pose.pose.position.z)
-            if dz < 0.1:
+            if dz < 0.3:
                 break
 
 
@@ -421,6 +414,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                 elif self.sampling.flag.data == 3 and self.sampling.sampler_C.data == True:
                     # Ascend and end mission
                     self.mission_end = True
+                    
 
 # There are some gap period in between where the loop won't go into any of the if cases. The drone will hover during that time.                    
 # Descend and Hover to keep the inlet at the water surface
@@ -433,22 +427,18 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             
             rate.sleep()
 
-# Uncomment When flying without the water sampler node-------------------------
-#    def clock(self):
-#        while not rospy.is_shutdown():
-#            rate = rospy.Rate(1)  # Hz
-#            if self.reached:
-#                rospy.loginfo("waypoint reached. flag will change after 30 seconds.")
-#                rospy.sleep(30)
-#                self.sampling_flag_data += 1
-#                self.reached = False
-#                rospy.loginfo(self.sampling_flag_data)
-#                if self.sampling_flag_data == 3:
-#                    self.reached = False
-#                    self.sampling_flag_data = 0
-#            rate.sleep()
-            
-#------------------------------------------------------------------------------    
+    def depth_check(self):
+        while not rospy.is_shutdown():
+            rate = rospy.Rate(5)  # Hz
+            if self.sampling.main_channel.data == True and self.EKF.estimate_z.data < self.danger_alt :
+                self.setpoint[2] = self.mission_waypoints_ENU[0][2]
+                rospy.logerr("Oops! Dangerous Altitude, going up")
+            elif self.sampling.main_channel.data == True and self.mission_end:
+                self.setpoint[2] = self.mission_waypoints_ENU[0][2]
+                rospy.loginfo("Mission ended, going up")
+                break
+            rate.sleep()
+
 
 
 if __name__ == '__main__':
