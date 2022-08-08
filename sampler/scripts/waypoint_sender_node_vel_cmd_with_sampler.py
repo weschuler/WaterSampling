@@ -431,8 +431,10 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         while not rospy.is_shutdown():
             rate = rospy.Rate(5)  # Hz
             if self.sampling.main_channel.data == True and self.EKF.estimate_z.data < self.danger_alt :
-                self.setpoint[2] = self.mission_waypoints_ENU[0][2]
+                #self.setpoint[2] = self.mission_waypoints_ENU[0][2]
+                self.setpoint[2] = self.setpoint[2] +2
                 rospy.logerr("Oops! Dangerous Altitude, going up")
+                rospy.sleep(10)
             elif self.sampling.main_channel.data == True and self.mission_end:
                 self.setpoint[2] = self.mission_waypoints_ENU[0][2]
                 rospy.loginfo("Mission ended, going up")
