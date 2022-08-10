@@ -13,13 +13,14 @@
 	<arg name="mission_file" value="$(arg file)"/>
     </include>
     
-    <include file="$(find sampler)/launch/sonar_sensor.launch"/>
+    <include file="$(find sampler)/launch/RTC.launch"/>
     <include file="$(find sampler)/launch/EKF.launch"/>
     <include file="$(find sampler)/launch/px4.launch"/>
     <include file="$(find sampler)/launch/arduino_com.launch"/>
     <include file="$(find sampler)/launch/conductivity_sensor.launch"/>
     <include file="$(find sampler)/launch/depth_sensor.launch"/> 
-    <include file="$(find sampler)/launch/pump_sweeper.launch"/> 
-    <include file="$(find sampler)/launch/log.launch"/> 
+    <include file="$(find sampler)/launch/pump_sweeper.launch"/>
+    <include file="$(find sampler)/launch/sonar_sensor.launch"/>
+    <include file="$(find sampler)/launch/log.launch"/>
 
 </launch>

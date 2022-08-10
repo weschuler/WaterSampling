@@ -23,6 +23,7 @@ add_message_files(DIRECTORY msg
   EKFInfo.msg
   SonarStamped.msg
   Setpoint.msg
+  RTC_time.msg
 )
 
 ## Generate added messages and services with any dependencies listed here

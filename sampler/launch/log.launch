@@ -33,6 +33,7 @@
 /watersampling/conductivity_sensor
 /watersampling/sampler_pump_info
 /watersampling/setpoint
+/watersampling/rtc_time
 
 /sensor/ref
 /sensor/fluor

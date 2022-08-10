@@ -54,18 +54,21 @@ class SamplerNode():
         self.sampler_C = Bottle(self._BOTTLE_C)
         
         self.sampling_flag = 0
+        self.depth_flag = 0
         self.counter = 0
         
         self.enable_sampler_main = False
         self.enable_sampler_C = False
         self.enable_sampler_B = False
         self.enable_sampler_A = False
-        
+
+# Parameters        
         self.inlet_depth = 0.0
         self.sampling_depth = 0.2
         self.fluor_median = 0
-        self.depth_flag = 0
         self.fluor_trigger = 100.0                                              # Need to change this value when going out in the real field.
+        self.fluor_mode_record = 1
+        self.fluor_mode_stop = 0
 
         # Fluorescence sensor
         self.fluorescence_readings = []
@@ -153,7 +156,7 @@ class SamplerNode():
                 #%% Check if there is water running in the circuit------------------------------
                 
                 if self.main_channel.is_full == True:
-                    SamplerNode.mode_sendor(self, 1)        # publishes mode = 1 to the /sensor/mode topic to start getting fluorescence measurements
+                    self.mode_sendor(self.fluor_mode_record)        # publishes mode = 1 to the /sensor/mode topic to start getting fluorescence measurements
                 
                 #%% Calculate median of fluorescence window-------------------------------------
                 if(len(self.fluorescence_readings) > 0):
@@ -236,7 +239,7 @@ class SamplerNode():
             self.sampling_pump_a.stop()
             self.sampling_pump_b.stop()
             self.sampling_pump_c.stop()
-            SamplerNode.mode_sendor(self, 0)                    # publishes mode = 0 to the /sensor/mode topic to stop getting fluorescence measurements 
+            self.mode_sendor(self.fluor_mode_stop)                    # publishes mode = 0 to the /sensor/mode topic to stop getting fluorescence measurements 
 
     def pumpInfoPublisher(self,):
         r = rp.Rate(self.rate)
