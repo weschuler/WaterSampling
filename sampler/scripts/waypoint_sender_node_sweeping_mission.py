@@ -129,10 +129,10 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             self.setpoint_pub.publish(self.setpoint_msg)
             
         
-        try:  # prevent garbage in console output when thread is killed
-            rate.sleep()
-        except rospy.ROSInterruptException:
-            pass
+            try:  # prevent garbage in console output when thread is killed
+                rate.sleep()
+            except rospy.ROSInterruptException:
+                pass
 
     def distance_to_wp(self, lat, lon, alt):
         """alt(ellipsoid): meters"""
