@@ -27,7 +27,7 @@ public:
     Drone_sensor();               // Constructor creates an instance of Drone_sensor class and sets defaults
 
     bool init();                  // Initialize sensor (called in setup)
-    bool start();                 // start ADC
+    bool start(bool laserState = true);                 // start ADC
     void shutdown();              // shutdown ADC
     bool laser(bool laserState);  // turn laser on/off
     bool shutter(bool shutterState); // open/close shutter
@@ -98,7 +98,6 @@ public:
     public:
         ADC_channel(uint8_t i) : oversample(i) {}   // class constructor allows user to set oversample
         uint8_t channelNumber = 0;
-        byte _numChannels = 0;                // Number of active/enabled channels
         uint8_t index = 0;                    // this depends on the number of active channels
         uint8_t oversample = 1;               // how many samples to average per result
         float results[N] = { 0 };
@@ -220,7 +219,6 @@ public:
             //channelList[_numChannels] = channel;
             nrf_saadc_channel_init(channel->channelNumber, &channel->config);
             _numChannels++;
-            channel->_numChannels = _numChannels;
             channel->define_uVperLSB();
 
             return(_numChannels);
@@ -254,7 +252,7 @@ public:
                 channel->results[i] = 0.0;
                 int32_t oversampleSum = 0;
                 for (int j = channel->index; j < (channel->oversample * _numChannels); j += _numChannels) {
-                    oversampleSum += buffer[(channel->oversample * i) + j];         // average oversampling
+                    oversampleSum += buffer[(channel->oversample * _numChannels * i) + j];         // average oversampling
                 }
                 channel->results[i] = float(oversampleSum) * channel->uVperLSB / channel->oversample;
                 resultSum += oversampleSum;

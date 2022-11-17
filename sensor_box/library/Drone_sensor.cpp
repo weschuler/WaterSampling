@@ -44,10 +44,10 @@ bool Drone_sensor::init() {
   return(true);  // only true if all (rtc, sd, IMU, HTS) begin successfully
 }
 
-bool Drone_sensor::start() {
+bool Drone_sensor::start( bool laserState ) {
     if (!_active) {
         _active = true;
-        laser(true);
+        laser(laserState);
         NRF_SAADC->EVENTS_STARTED = 0;
     }
     if (NRF_SAADC->EVENTS_STARTED == 0) {
@@ -60,7 +60,7 @@ bool Drone_sensor::start() {
         return(true);
     }
     else {
-        _errorCase = 2;
+        _errorCase = 5;
         _mode = 0;
         return(false);
     }
@@ -177,10 +177,34 @@ bool Drone_sensor::newFile() {
         _fileName[5] = '0';
         break;
      case 12:
+        _fileName[0] = 'f';
+        _fileName[1] = 'r';
+        _fileName[2] = 's';
+        _fileName[3] = 'd';
+        _fileName[4] = '0';
+        _fileName[5] = '0';
+        break;
+     case 13:
+        _fileName[0] = 'f';
+        _fileName[1] = 'l';
+        _fileName[2] = 'u';
+        _fileName[3] = 'o';
+        _fileName[4] = '0';
+        _fileName[5] = '0';
+        break;
+     case 14:
         _fileName[0] = 'a';
         _fileName[1] = 'd';
         _fileName[2] = 'c';
         _fileName[3] = 'b';
+        _fileName[4] = '0';
+        _fileName[5] = '0';
+        break;
+     case 15:
+        _fileName[0] = 'f';
+        _fileName[1] = 'r';
+        _fileName[2] = 's';
+        _fileName[3] = 'c';
         _fileName[4] = '0';
         _fileName[5] = '0';
         break;
