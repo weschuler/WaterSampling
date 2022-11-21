@@ -73,6 +73,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.sampling_flag_data = 0
         self.sampling_depth = 0.2
         self.danger_alt = 0.5                                   # Dangerous distance above the water surface.
+        self.d = 1.5                                            # Maximum interval between two intermediate waypoints
         self.inputs = [0,0,0,0]
         
 #        self.pos_setpoint_pub = rospy.Publisher(
@@ -193,8 +194,8 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
 #        print("Both libraries equal?", np.allclose(quaternion, quaternion_from_quatlib))
         
         if not dxy <= self.radius:
-    # Generate intermediate waypoints every 1.5 meters apart        
-            n = int(dxy/1.5)
+    # Generate intermediate waypoints every d meters apart        
+            n = int(dxy/self.d)
             if n < 2:
                 n =  2
             xx = np.linspace(self.local_position.pose.position.x, target[0,0], n)
@@ -294,7 +295,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         mission_file = rospy.get_param('/waypoint_sender_node/file_name')
         
         if mission_file == 'None':
-            rospy.logerr("usage: waypoint_sender.launch mission_file:=mission_file.plan")
+            rospy.logerr("usage: waypoint_sender.launch file:=mission_file.plan")
             return
         mission_file = mission_dir + mission_file
         

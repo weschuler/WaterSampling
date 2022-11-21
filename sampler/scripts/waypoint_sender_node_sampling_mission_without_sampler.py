@@ -71,10 +71,10 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.reached = False
         self.mission_end = False
         self.sampling_flag_data = 0
-        self.sampling_depth = 0.2
-        self.danger_alt = 0.5
-        self.d = 1.5
+        self.sampling_depth = 0.05
+        self.d = 1.5                        # Maximum interval between two intermediate waypoints
         self.inputs = [0,0,0,0]
+        self.counter = 0
         
 #        self.pos_setpoint_pub = rospy.Publisher(
 #            'mavros/setpoint_position/local', PoseStamped, queue_size=1)
@@ -100,9 +100,8 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.ctl_thread = Thread(target=self.posctl)
         self.ctl_thread.start()
         
-        self.depth_check_thread = Thread(target=self.depth_check)
-        self.depth_check_thread.start()
-
+        self.clk_thread = Thread(target=self.clock)
+        self.clk_thread.start()
         
     #
 #%%    # Helper methods
@@ -184,108 +183,72 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         target = self.u.geo2enu(x, y, z)
         current = self.u.geo2enu(self.global_position.latitude, self.global_position.longitude, self.global_position.altitude)
         dxy, dz = self.distance_to_wp(x,y,z)
-        
-        if not dxy <= self.radius:
-    # Generate intermediate waypoints every d meters apart        
-            n = int(dxy/self.d)
-            if n < 2:
-                n =  2
-            xx = np.linspace(self.local_position.pose.position.x, target[0,0], n)
-            yy = np.linspace(self.local_position.pose.position.y, target[1,0], n)
-    
-            rospy.loginfo("========================")
-            rospy.loginfo(
-                "attempting to reach position | latitude: {0}, longitude: {1}, altitude: {2} | current position latitude: {3}, longitude: {4}, altitude: {5}".
-                format(x, y, z, self.global_position.latitude,
-                       self.global_position.longitude,
-                       self.global_position.altitude))
-    
-            # does it reach the position in 'timeout' seconds?
-    
-            for k in range(n):
-                self.setpoint = [xx[k], yy[k], target[2,0], self.yaw]               # x, y, z, yaw
-                
-                loop_freq = 5  # Hz
-                rate = rospy.Rate(loop_freq)
-    
-                for i in xrange(timeout * loop_freq):
-                    if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
-                        rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
-                            k+1,n,i / loop_freq, timeout))
-        
-                        break
-        
-        
-                    try:
-                        rate.sleep()
-                    except rospy.ROSException as e:
-                        rospy.logerr(e)
-            
-            if self.is_at_position(target[0,0], target[1,0], target[2,0], self.radius):
-                self.reached = True
-                rospy.loginfo("Waypoint Achieved, descending to water level")
-            else:
-                self.reached = False
-                rospy.logerr("Failed to reach waypoint")
 
-    def sweep_position(self, x, y, timeout):
-        """
-        x: ENU x
-        y: ENU y
-        timeout: seconds, maximum allowable time for achieving each intermediate setpoint 
-        """
+#        # Calculate the yaw/heading towards the next waypoint.        
+#        if dxy > self.radius:
+#            numerator = target[1,0] - current[1,0]                              # THE SUBTRACTION MUST BE FROM TARGET TO CURRENT.
+#            denominator = target[0,0] - current[0,0]
+#            self.yaw = math.atan2(numerator, denominator)
+
+#        quaternion = eul2quat(0, 0, self.yaw)
+#        print("Both libraries equal?", np.allclose(quaternion, quaternion_from_quatlib))
         
-        desired = np.array((x, y))
-        pos = np.array((self.local_position.pose.position.x,
-                        self.local_position.pose.position.y))
-
-        dxy = np.linalg.norm(desired - pos)     
-
-    # Generate intermediate waypoints every 0.5 meters apart        
-        n = int(dxy/0.5)
+#        if not dxy <= self.radius:
+    # Generate intermediate waypoints every self.d meters apart        
+        n = int(dxy/self.d)
         if n < 2:
             n =  2
-        xx = np.linspace(self.local_position.pose.position.x, desired[0], n)
-        yy = np.linspace(self.local_position.pose.position.y, desired[1], n)
+        xx = np.linspace(self.local_position.pose.position.x, target[0,0], n)
+        yy = np.linspace(self.local_position.pose.position.y, target[1,0], n)
 
         rospy.loginfo("========================")
         rospy.loginfo(
-            "attempting to reach position | x: {0}, y: {1} | current position x: {2}, y: {3}".
-            format(x, y, self.local_position.pose.position.x,
-                   self.local_position.pose.position.y))
+            "attempting to reach position | latitude: {0}, longitude: {1}, altitude: {2} | current position latitude: {3}, longitude: {4}, altitude: {5}".
+            format(x, y, z, self.global_position.latitude,
+                   self.global_position.longitude,
+                   self.global_position.altitude))
 
         # does it reach the position in 'timeout' seconds?
 
         for k in range(n):
-            if self.start == False:
-                break
-            
-            self.setpoint[0] = xx[k]
-            self.setpoint[1] = yy[k]
+            self.setpoint = [xx[k], yy[k], target[2,0], self.yaw]               # x, y, z, yaw
             
             loop_freq = 5  # Hz
             rate = rospy.Rate(loop_freq)
 
             for i in xrange(timeout * loop_freq):
-                if self.start == False:
-                    break                
-                if self.is_at_position(xx[k], yy[k], self.setpoint[2], self.radius) and self.inlet_depth >= self.sampling_depth:
+                if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
                     rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
                         k+1,n,i / loop_freq, timeout))
     
                     break
-                elif self.inlet_depth < self.sampling_depth:
-                    self.descend(10)
+    
     
                 try:
                     rate.sleep()
                 except rospy.ROSException as e:
                     rospy.logerr(e)
+        
+        self.counter = self.counter+1
+        
+        if self.is_at_position(target[0,0], target[1,0], target[2,0], self.radius):
+            self.reached = True
+            rospy.loginfo("Waypoint Achieved, descending to water level")
+        else:
+            self.reached = False
+            rospy.logerr("Failed to reach waypoint")
 
 
     def descend(self, timeout):
-        if self.inlet_depth < self.sampling_depth and self.EKF.estimate_z.data > self.danger_alt :
+        if self.inlet_depth < self.sampling_depth and self.EKF.estimate_z.data > 0.5:
             self.setpoint[2] = self.setpoint[2] - 0.2
+            
+        elif self.EKF.estimate_z.data < 0.5:
+            self.setpoint[2] = self.mission_waypoints_ENU[0][2]
+            rospy.logerr("Oops! Dangerous Altitude, going up")
+        elif self.mission_end:
+            self.setpoint[2] = self.mission_waypoints_ENU[0][2]
+            rospy.loginfo("Mission ended, going up")
         
         loop_freq = 5  # Hz
         rate = rospy.Rate(loop_freq)
@@ -309,7 +272,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
           #  if self.state.armed:
             self.center = GeoPointStamped()
             rospy.loginfo("Waiting for EKF Origin fix")
-            rospy.sleep(10)
+#            rospy.sleep(10)
             self.center.header.frame_id = "geo"
             self.center.position.latitude = self.home_position.geo.latitude
             self.center.position.longitude = self.home_position.geo.longitude
@@ -322,8 +285,25 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
 #%%        """Extract waypoints (both LLA and ENU) from a plan file and store into a dictionary."""
         """Test mission"""
 
+#-------------------------Uncomment if running script form terminal------------
+#        if len(sys.argv) < 2:
+#            rospy.logerr("usage: joy_global_waypoint_sender.py mission_file.plan")
+#            return
+#
+#        path = os.path.dirname(os.path.realpath(__file__))
+#        path_split = path.split('/')
+#        path_to_mission = ''
+#        for i in range(len(path_split) - 2):
+#            path_to_mission += path_split[i] + '/'
+#        path_to_mission += 'missions/'
+        
+#        mission_file = path_to_mission + sys.argv[1]
+
+#-------------------------Uncomment if running launch from terminal------------
         mission_dir = rospy.get_param('/waypoint_sender_node/mission_directory')
+        rospy.loginfo(mission_dir)
         mission_file = rospy.get_param('/waypoint_sender_node/file_name')
+        
         
         if mission_file == 'None':
             rospy.logerr("usage: waypoint_sender.launch file:=mission_file.plan")
@@ -387,45 +367,100 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                 self.local_position.pose.orientation.z,)
                 self.yaw = rpy[2]
 #                rospy.loginfo("yaw fixed to: {0} degrees".format(np.degrees(self.yaw)))
+
+#                # exempting failsafe from lost RC to allow offboard
+#                    rcl_except = ParamValue(1<<2, 0.0)
+#                    self.set_param("COM_RCL_EXCEPT", rcl_except, 5)                 # Specify modes in which RC loss is ignored and the failsafe action not triggered. 0: Mission, 1: Hold, 2: Offboard
+#                self.set_mode("OFFBOARD", 5)
                   
-     
-                
-                if self.sampling.flag.data == 0 and self.sampling.main_channel.data == False:
-                    # GOTO waypoint 1
+# Uncomment When flying without the water sampler node-------------------------
+
+                if self.reached == False and self.sampling_flag_data == 0:
+                    self.reached = False
                     self.reach_position(self.mission_waypoints_LLA[0][0],\
-                                            self.mission_waypoints_LLA[0][1],\
-                                            self.mission_waypoints_LLA[0][2], 60)
-                    self.descend(10)                                        # self.descend(timeout)
+                                        self.mission_waypoints_LLA[0][1],\
+                                        self.mission_waypoints_LLA[0][2], 60)
+                    self.reached = True
+                    self.setpoint = (self.mission_waypoints_ENU[0][0], self.mission_waypoints_ENU[0][1], 2.0, self.yaw)               # x, y, z, yaw
+
+
+                if self.reached == False and self.sampling_flag_data == 1:
+                    self.reached = False
+                    self.reach_position(self.mission_waypoints_LLA[1][0],\
+                                        self.mission_waypoints_LLA[1][1],\
+                                        self.mission_waypoints_LLA[1][2], 60)
+                    self.reached = True
+                    self.setpoint = (self.mission_waypoints_ENU[1][0], self.mission_waypoints_ENU[1][1], 2.0, self.yaw)               # x, y, z, yaw
+
                     
-                elif self.sampling.main_channel.data == True:
-                    # SWEEP
-                    for i in range(len(self.mission_waypoints_ENU)-1):
-                        self.sweep_position(self.mission_waypoints_ENU[i+1][0],\
-                                            self.mission_waypoints_ENU[i+1][1], 60)
-                        rospy.loginfo("Now at waypoint {0}".format(i+1))
-                    self.mission_end = True
-                    rospy.sleep(10)
-                   
+                if self.reached == False and self.sampling_flag_data == 2:
+                    self.reached = False
+                    self.reach_position(self.mission_waypoints_LLA[2][0],\
+                                        self.mission_waypoints_LLA[2][1],\
+                                        self.mission_waypoints_LLA[2][2], 60)
+                    self.reached = True
+                    self.setpoint = (self.mission_waypoints_ENU[2][0], self.mission_waypoints_ENU[2][1], 2.0, self.yaw)               # x, y, z, yaw
+
+#------------------------------------------------------------------------------
+# Uncomment When using the Aurelia drone with the real sampler node------------       
+                
+#                if self.sampling.flag.data == 0:
+#                    # GOTO waypoint 1
+#                    if self.counter == 0:
+#                        self.reach_position(self.mission_waypoints_LLA[0][0],\
+#                                            self.mission_waypoints_LLA[0][1],\
+#                                            self.mission_waypoints_LLA[0][2], 2)
+#
+#                    
+#                elif self.sampling.flag.data == 1 and self.sampling.sampler_A.data == True:
+#                    # GOTO waypoint 2
+#                    if self.counter == 1:
+#                        self.reach_position(self.mission_waypoints_LLA[1][0],\
+#                                            self.mission_waypoints_LLA[1][1],\
+#                                            self.mission_waypoints_LLA[1][2], 2)
+#                    
+#                elif self.sampling.flag.data == 2 and self.sampling.sampler_B.data == True:
+#                    # GOTO waypoint 3
+#                    if self.counter == 2:
+#                        self.reach_position(self.mission_waypoints_LLA[2][0],\
+#                                            self.mission_waypoints_LLA[2][1],\
+#                                            self.mission_waypoints_LLA[2][2], 2)
+#                    
+#                elif self.sampling.flag.data == 3 and self.sampling.sampler_C.data == True:
+#                    # Ascend and end mission
+#                    self.mission_end = True
+#
+## There are some gap period in between where the loop won't go into any of the if cases. The drone will hover during that time.                    
+## Descend and Hover to keep the inlet at the water surface
+#                self.descend(10)                                        # self.descend(timeout)
+#------------------------------------------------------------------------------    
             else:
+#                if self.start == False:
+#                    rospy.loginfo("mission switch off")
+#                if self.mission_end == True:
+#                    rospy.loginfo("mission ended")
                 if self.state.mode == "OFFBOARD":
                     rospy.loginfo("mission stopped")
                     self.set_mode("POSCTL", 5)
             
             rate.sleep()
 
-    def depth_check(self):
+# Uncomment When flying without the water sampler node-------------------------
+    def clock(self):
         while not rospy.is_shutdown():
-            rate = rospy.Rate(5)  # Hz
-            if self.sampling.main_channel.data == True and self.EKF.estimate_z.data < self.danger_alt :
-                #self.setpoint[2] = self.mission_waypoints_ENU[0][2]
-                self.setpoint[2] = self.setpoint[2] +2
-                rospy.logerr("Oops! Dangerous Altitude, going up")
-                rospy.sleep(10)
-            elif self.sampling.main_channel.data == True and self.mission_end:
-                self.setpoint[2] = self.mission_waypoints_ENU[0][2]
-                rospy.loginfo("Mission ended, going up")
-                break
+            rate = rospy.Rate(1)  # Hz
+            if self.reached:
+                rospy.loginfo("waypoint reached. flag will change after 30 seconds.")
+                rospy.sleep(30)
+                self.sampling_flag_data += 1
+                self.reached = False
+                rospy.loginfo(self.sampling_flag_data)
+                if self.sampling_flag_data == 3:
+                    self.reached = False
+                    self.sampling_flag_data = 0
             rate.sleep()
+            
+#------------------------------------------------------------------------------    
 
 
 if __name__ == '__main__':
