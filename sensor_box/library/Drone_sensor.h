@@ -96,13 +96,27 @@ public:
     template <int N>
     class ADC_channel {
     public:
-        ADC_channel(uint8_t i) : oversample(i) {}   // class constructor allows user to set oversample
+        ADC_channel(uint8_t i, nrf_saadc_input_t pp) :   // class constructor allows user to set oversample and pin
+          oversample{i}, 
+          config{  
+            NRF_SAADC_RESISTOR_DISABLED,  // resistor_p
+            NRF_SAADC_RESISTOR_DISABLED,  // resistor_n
+            NRF_SAADC_GAIN4,              // gain
+            NRF_SAADC_REFERENCE_INTERNAL, // reference (voltage)
+            NRF_SAADC_ACQTIME_5US,        // acq_time
+            NRF_SAADC_MODE_SINGLE_ENDED,  // mode
+            NRF_SAADC_BURST_DISABLED,     // burst
+            pp,                           // pin_p
+            NRF_SAADC_INPUT_DISABLED      // pin_n
+          } 
+        {} // end constructor
         uint8_t channelNumber = 0;
         uint8_t index = 0;                    // this depends on the number of active channels
-        uint8_t oversample = 1;               // how many samples to average per result
+        uint8_t oversample;               // how many samples to average per result
         float results[N] = { 0 };
         int resultSize = N;
         float uVperLSB = 0;
+        nrf_saadc_channel_config_t config;
 
         inline uint8_t getChannelNumber() {
             return(channelNumber);
@@ -116,6 +130,12 @@ public:
         void setGain(nrf_saadc_gain_t gain) {
             nrf_saadc_disable();
             config.gain = gain;
+            nrf_saadc_enable();
+        };
+        void setGain(int gain) {
+            nrf_saadc_disable();
+            config.gain = nrf_saadc_gain_t(gain);
+            nrf_saadc_enable();
         };
         void define_uVperLSB() {
             float uVfullScale = 600000; // always use internal 0.6 V reference
@@ -149,15 +169,6 @@ public:
             float LSBfullScale = pow(2, (12 - (config.mode == NRF_SAADC_MODE_DIFFERENTIAL)));
             uVperLSB = uVfullScale / gainVal / LSBfullScale;
         }
-        nrf_saadc_channel_config_t config{ NRF_SAADC_RESISTOR_DISABLED,  // resistor_p
-                                           NRF_SAADC_RESISTOR_DISABLED,  // resistor_n
-                                           NRF_SAADC_GAIN1_4,            // gain
-                                           NRF_SAADC_REFERENCE_INTERNAL, // reference (voltage)
-                                           NRF_SAADC_ACQTIME_5US,        // acq_time
-                                           NRF_SAADC_MODE_SINGLE_ENDED,  // mode
-                                           NRF_SAADC_BURST_DISABLED,     // burst
-                                           NRF_SAADC_INPUT_DISABLED,     // pin_p
-                                           NRF_SAADC_INPUT_DISABLED };   // pin_n
     };
 
     /* class for ADC core */
@@ -217,6 +228,7 @@ public:
             channel->channelNumber = _numChannels;
             channel->index = _numChannels;
             //channelList[_numChannels] = channel;
+            channel->setGain(NRF_SAADC_GAIN4); // start at max gain
             nrf_saadc_channel_init(channel->channelNumber, &channel->config);
             _numChannels++;
             channel->define_uVperLSB();
@@ -247,15 +259,31 @@ public:
             if (channel->resultSize > (bufferSize / _numChannels / channel->oversample)) { // make sure we don't overrun the ADC buffer
                 channel->resultSize = (bufferSize / _numChannels / channel->oversample);
             }
+            
+            int OOR = 0;
+            bool OOR_flag = false;
+            int OOR_max = (bufferSize / _numChannels / 16) + 1; // the max number of acceptable OOR values is 1/16th of the channel results (with a min value of 1)
+            int16_t LSBfullScale = pow(2, (12 - (channel->config.mode == NRF_SAADC_MODE_DIFFERENTIAL)));
 
             for (int i = 0; i < channel->resultSize; i++) {
                 channel->results[i] = 0.0;
                 int32_t oversampleSum = 0;
                 for (int j = channel->index; j < (channel->oversample * _numChannels); j += _numChannels) {
                     oversampleSum += buffer[(channel->oversample * _numChannels * i) + j];         // average oversampling
+                    if(OOR < OOR_max){                                 
+                      if(buffer[(channel->oversample * _numChannels * i) + j] >= LSBfullScale){    // check for Out Of Range values
+                        OOR++;                                                                     // and count the total
+                      } 
+                    }else{                                                                         // stop counting after the max is reached
+                      OOR_flag = true;                                                             // set flag to autoscale the gain
+                    }
                 }
                 channel->results[i] = float(oversampleSum) * channel->uVperLSB / channel->oversample;
                 resultSum += oversampleSum;
+            }
+
+            if(OOR_flag && channel->config.gain){ // if signal is out of range, and we're not already at the lowest gain setting
+              channel->setGain(channel->config.gain - 1);            // decrease the gain
             }
 
             NRF_SAADC->EVENTS_STARTED = 0;
