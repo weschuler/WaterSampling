@@ -31,6 +31,7 @@ ros::Subscriber<std_msgs::Int16> mode("sensor/mode", messageCb );    // Declare 
 std_msgs::Float32 fluorMsg;                                     // Set up data type for fluorescence data message
 std_msgs::Float32 refMsg;                                       // Set up data type for reference data message
 std_msgs::Float32 scatMsg;                                       // Set up data type for scattering data message
+std_msgs::Int16 setMsg;
 std_msgs::Float32 temperature;                                // Set up data type for temp data message
 std_msgs::Float32 humidity;                                   // Set up data type for humidity data message
 std_msgs::String myErrorMsg;                                       // Set up error message
@@ -40,6 +41,7 @@ std_msgs::Int16 diagnostic;
 ros::Publisher fluorPub("sensor/fluor", &fluorMsg);             // Declare publisher of fluorescence data message on "sensor/fluor" topic
 ros::Publisher refPub("sensor/ref", &refMsg);                   // Declare publisher of reference data message on "sensor/ref" topic
 ros::Publisher scatPub("sensor/scat", &scatMsg);                   // Declare publisher of scattering data message on "sensor/scat" topic
+ros::Publisher setPub("sensor/settings", &setMsg);
 ros::Publisher tempPub("sensor/temp", &temperature);                 // Declare publisher of temp data message on "temp" topic
 ros::Publisher humPub("sensor/humidity", &humidity);                 // Declare publisher of humidity data message on "humidity" topic
 ros::Publisher errorPub("sensor/error", &myErrorMsg);                     // Set up publisher of error topic
@@ -70,6 +72,7 @@ void setup() {
     nh.advertise(fluorPub);        // Start advertising/publishing on "fluor_data" topic
     nh.advertise(refPub);          // Start advertising/publishing on "ref_data" topic
     nh.advertise(scatPub);          // Start advertising/publishing on "ref_data" topic
+    nh.advertise(setPub);
     nh.advertise(tempPub);         // Start advertising/publishing on "temp" topic
     nh.advertise(humPub);          // Start advertising/publishing on "humidity" topic
     nh.advertise(errorPub);        // Advertise error topic
@@ -157,16 +160,7 @@ void loop() {
 
     #ifdef DEBUG
       Serial.print(adc._numChannels);
-      Serial.println(F("channels enabled"));
-      Serial.print(fluorescence.uVperLSB);
-      Serial.println(F(" uV/LSB (fluorescence)"));
-      Serial.print(reference.uVperLSB);
-      Serial.println(F(" uV/LSB (reference)"));
-      Serial.print(scattering.uVperLSB);
-      Serial.println(F(" uV/LSB (scattering)"));
-      Serial.print(scattering.index);
-      Serial.println(F(" (scattering channel index)"));
-      delay(1000);
+      Serial.println(F(" channels enabled"));
       Serial.println(F("Creating new file"));
     #endif // DEBUG
 
@@ -178,7 +172,7 @@ void loop() {
     float scatBackground = 0.0;
     while (sensor.getMode() == 1) {
       while (!sensor.dataReady()) {}      // wait for data buffer to fill
-      sensor.laser(sampleCounter == 255); // turn laser off every 256th sample (on otherwise)
+      sensor.laser(sampleCounter != 255); // turn laser off every 256th sample (on otherwise)
 
       #ifdef DEBUG
         Serial.println(F("Getting data"));
@@ -191,6 +185,18 @@ void loop() {
         fluorBackground = adc.getData(&fluorescence);
         refBackground = adc.getData(&reference);
         scatBackground = adc.getData(&scattering);
+      }
+
+      if(adc.OOR_flag){
+        setMsg.data = (100*fluorescence.config.gain) + (10*reference.config.gain) + (scattering.config.gain);
+        #ifndef DEBUG
+          setPub.publish(&setMsg);
+        #endif // !DEBUG
+        #ifdef DEBUG
+          Serial.print(F("Autogain: "));
+          Serial.println(setMsg.data);
+        #endif // DEBUG
+        adc.OOR_flag = false; // clear flag
       }
 
       sampleCounter++;                // increment sample counter
@@ -207,6 +213,7 @@ void loop() {
       #endif // !DEBUG
 
       #ifdef DEBUG
+        Serial.print("Data:\t");
         Serial.print(fluorMsg.data);
         Serial.print("\t");
         Serial.print(refMsg.data);
@@ -448,6 +455,8 @@ void loop() {
         Serial.print(fluorMsg.data);
         Serial.print("\t");
         Serial.println(refMsg.data);
+        Serial.print("\t");
+        Serial.println(scatMsg.data);
 
         if (Serial.available()) {
           sensor.setMode(Serial.parseInt());

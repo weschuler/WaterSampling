@@ -128,14 +128,10 @@ public:
             return(oversample);
         }
         void setGain(nrf_saadc_gain_t gain) {
-            nrf_saadc_disable();
             config.gain = gain;
-            nrf_saadc_enable();
         };
         void setGain(int gain) {
-            nrf_saadc_disable();
             config.gain = nrf_saadc_gain_t(gain);
-            nrf_saadc_enable();
         };
         void define_uVperLSB() {
             float uVfullScale = 600000; // always use internal 0.6 V reference
@@ -181,6 +177,7 @@ public:
         byte _numChannels = 0;                // Number of active/enabled channels
        // ADC_channel* channelList[9] = { 0 };
         int _samplePeriod;
+        bool OOR_flag = false;
 
         bool init() {
 
@@ -261,9 +258,8 @@ public:
             }
             
             int OOR = 0;
-            bool OOR_flag = false;
             int OOR_max = (bufferSize / _numChannels / 16) + 1; // the max number of acceptable OOR values is 1/16th of the channel results (with a min value of 1)
-            int16_t LSBfullScale = pow(2, (12 - (channel->config.mode == NRF_SAADC_MODE_DIFFERENTIAL)));
+            int16_t LSBfullScale = pow(2, (11 - (channel->config.mode == NRF_SAADC_MODE_DIFFERENTIAL)));
 
             for (int i = 0; i < channel->resultSize; i++) {
                 channel->results[i] = 0.0;
@@ -275,7 +271,7 @@ public:
                         OOR++;                                                                     // and count the total
                       } 
                     }else{                                                                         // stop counting after the max is reached
-                      OOR_flag = true;                                                             // set flag to autoscale the gain
+                      OOR_flag = true;                                                             // set flag to autoscale the gain (the flag is not cleared automatically within this or any other function)
                     }
                 }
                 channel->results[i] = float(oversampleSum) * channel->uVperLSB / channel->oversample;
@@ -283,7 +279,11 @@ public:
             }
 
             if(OOR_flag && channel->config.gain){ // if signal is out of range, and we're not already at the lowest gain setting
+              nrf_saadc_disable();
               channel->setGain(channel->config.gain - 1);            // decrease the gain
+              nrf_saadc_channel_init(channel->channelNumber, &channel->config); // apply new gain setting
+              channel->define_uVperLSB();
+              nrf_saadc_enable();
             }
 
             NRF_SAADC->EVENTS_STARTED = 0;
