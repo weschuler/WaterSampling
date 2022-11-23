@@ -85,14 +85,16 @@ void Drone_sensor::shutdown() {
 
 /* Laser and shutter controls */
 bool Drone_sensor::laser( bool laserState ) {
-    _laserState = laserState;
-    if ( _laserState ) {
-        NRF_GPIOTE->TASKS_CLR[0] = 1;             // turn laser on
-    } else {
-        NRF_GPIOTE->TASKS_SET[0] = 1;             // turn laser off
+    if(_laserState != laserState){                  // only do something if the input is different from the current laser state
+      _laserState = laserState;
+      if ( _laserState ) {
+          NRF_GPIOTE->TASKS_CLR[0] = 1;             // turn laser on
+      } else {
+          NRF_GPIOTE->TASKS_SET[0] = 1;             // turn laser off
+      }
+      unsigned long timeIn = micros();
+      while (micros() < timeIn + SENSOR_LASER_DELAY) {} // wait for the laser output to stabilize
     }
-    unsigned long timeIn = micros();
-    while (micros() < timeIn + SENSOR_LASER_DELAY) {}
     return( _laserState );
 }
 
@@ -129,112 +131,56 @@ bool Drone_sensor::newFile() {
     uint8_t fileNumber = 0;
     switch (_mode) {
     case 2:
-        _fileName[0] = 'c';
-        _fileName[1] = 'a';
-        _fileName[2] = 'l';
-        _fileName[3] = 'i';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
-    case 7:
-        _fileName[0] = 't';
-        _fileName[1] = 'e';
-        _fileName[2] = 's';
-        _fileName[3] = 't';
-        _fileName[4] = '0';
-        _fileName[5] = '0';       
-        break;
-    case 8:
-        _fileName[0] = 'v';
-        _fileName[1] = 'i';
-        _fileName[2] = 'b';
-        _fileName[3] = 'e';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
-    case 9:
-        _fileName[0] = 'a';
-        _fileName[1] = 'u';
-        _fileName[2] = 'd';
-        _fileName[3] = 'i';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
-    case 10:
-        _fileName[0] = 'c';
-        _fileName[1] = 'l';
-        _fileName[2] = 'i';
-        _fileName[3] = 'm';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
-    case 11:
-        _fileName[0] = 's';
-        _fileName[1] = 'c';
-        _fileName[2] = 'a';
-        _fileName[3] = 't';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
-     case 12:
-        _fileName[0] = 'f';
-        _fileName[1] = 'r';
-        _fileName[2] = 's';
-        _fileName[3] = 'd';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
-     case 13:
-        _fileName[0] = 'f';
-        _fileName[1] = 'l';
-        _fileName[2] = 'u';
-        _fileName[3] = 'o';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
-     case 14:
-        _fileName[0] = 'a';
-        _fileName[1] = 'd';
-        _fileName[2] = 'c';
-        _fileName[3] = 'b';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
-     case 15:
-        _fileName[0] = 'f';
-        _fileName[1] = 'r';
-        _fileName[2] = 's';
-        _fileName[3] = 'c';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
+      _fileName[0] = 'c';
+      _fileName[1] = 'a';
+      _fileName[2] = 'l';
+      _fileName[3] = 'i';
+      _fileName[4] = '0';
+      _fileName[5] = '0';
+      break;
+    case 14:
+      _fileName[0] = 'a';
+      _fileName[1] = 'd';
+      _fileName[2] = 'c';
+      _fileName[3] = 'b';
+      _fileName[4] = '0';
+      _fileName[5] = '0';
+      break;
+    case 15:
+      _fileName[0] = 'f';
+      _fileName[1] = 'r';
+      _fileName[2] = 's';
+      _fileName[3] = 'c';
+      _fileName[4] = '0';
+      _fileName[5] = '0';
+      break;
     default:
-        _fileName[0] = 'd';
-        _fileName[1] = 'a';
-        _fileName[2] = 't';
-        _fileName[3] = 'a';
-        _fileName[4] = '0';
-        _fileName[5] = '0';
-        break;
+      _fileName[0] = 'd';
+      _fileName[1] = 'a';
+      _fileName[2] = 't';
+      _fileName[3] = 'a';
+      _fileName[4] = '0';
+      _fileName[5] = '0';
+      break;
     }
 
     while (sd.exists(_fileName)) {                                // if file already exists
-        fileNumber++;                                            // try the next number
-        _fileName[4] = fileNumber / 10 + '0';                       // sets the 10's place
-        _fileName[5] = fileNumber % 10 + '0';                       // sets the 1's place
+      fileNumber++;                                            // try the next number
+      _fileName[4] = fileNumber / 10 + '0';                       // sets the 10's place
+      _fileName[5] = fileNumber % 10 + '0';                       // sets the 1's place
     }
 
     if (!file.open(_fileName, O_CREAT | O_TRUNC | O_WRITE)) {     // create file
-        _errorCase = 7;
-        _mode = 0;
-        if(!sd.begin()){
-          _errorCase = 8;
-        }
-        return(false);
+      _errorCase = 7;
+      _mode = 0;
+      if(!sd.begin()){
+        _errorCase = 8;
+      }
+      return(false);
     }
 
     if (_mode == 10) {
-        file.println("Temperature\tHumidity");
+      file.println("Temperature\tHumidity");
     }
 
     return (true);
