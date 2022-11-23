@@ -40,6 +40,9 @@
 /sensor/temp
 /sensor/humidity
 /sensor/error
+/sensor/scat
+/sensor/settings
+/sensor/calibration
 
 
 
