@@ -77,7 +77,13 @@ class PD_Controller_Class(MavrosTestCommonTweaked):
     self.error_x = setpoint[0] - self.pos_world[0,0]
     self.error_y = setpoint[1] - self.pos_world[1,0]
     self.error_z = setpoint[2] - self.pos_world[2,0]
-    self.error_q = setpoint[3] - yaw                       # 
+    self.error_q = setpoint[3] - yaw
+    
+    if abs(self.error_q) > np.pi:
+        if self.error_q > 0:
+            self.error_q = self.error_q - 2*np.pi
+        elif self.error_q < 0:
+            self.error_q = self.error_q + 2*np.pi
 
     x_input_world = Kp_xy*self.error_x + Kd_xy*(self.error_x-self.prev_error_x)
     y_input_world = Kp_xy*self.error_y + Kd_xy*(self.error_y-self.prev_error_y)
