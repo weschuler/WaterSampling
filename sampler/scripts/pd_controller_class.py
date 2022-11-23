@@ -80,6 +80,7 @@ class PD_Controller_Class(MavrosTestCommonTweaked):
     self.error_z = setpoint[2] - self.pos_world[2,0]
     self.error_q = setpoint[3] - yaw
     
+    # Check for yaw_error greater than 180 degs or pi radians. If so, calculate the shortest error.
     if abs(self.error_q) > np.pi:
         if self.error_q > 0:
             self.error_q = self.error_q - 2*np.pi
