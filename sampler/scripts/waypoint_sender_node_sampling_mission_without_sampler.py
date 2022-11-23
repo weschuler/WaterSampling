@@ -217,11 +217,29 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             rate = rospy.Rate(loop_freq)
 
             for i in xrange(timeout * loop_freq):
-                if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
-                    rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
-                        k+1,n,i / loop_freq, timeout))
-    
-                    break
+                
+#--------------------------Original Block---------------------------------------------------------------
+#                if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
+#                    rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
+#                        k+1,n,i / loop_freq, timeout))
+#    
+#                    break
+#--------------------------------------------------------------------------------------------------------
+
+#--------------------------Alternate Block---------------------------------------------------------------
+                if k == n-1:
+                    if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
+                        rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
+                            k+1,n,i / loop_freq, timeout))
+        
+                        break
+                else:
+                    if self.is_at_position(xx[k], yy[k], target[2,0], 0.4*self.d):
+                        rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
+                            k+1,n,i / loop_freq, timeout))
+        
+                        break
+#--------------------------------------------------------------------------------------------------------
     
     
                 try:
