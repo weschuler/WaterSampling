@@ -72,7 +72,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.mission_end = False
         self.sampling_flag_data = 0
         self.sampling_depth = 0.05
-        self.d = 1.5                        # Maximum interval between two intermediate waypoints
+        self.d = 20                        # Maximum interval between two intermediate waypoints
         self.inputs = [0,0,0,0]
         self.counter = 0
         
@@ -233,7 +233,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                             k+1,n,i / loop_freq, timeout))
         
                         break
-                else:
+                elif k != n-1:
                     if self.is_at_position(xx[k], yy[k], target[2,0], 0.4*self.d):
                         rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
                             k+1,n,i / loop_freq, timeout))
@@ -399,7 +399,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.mission_waypoints_LLA[0][1],\
                                         self.mission_waypoints_LLA[0][2], 60)
                     self.reached = True
-                    self.setpoint = (self.mission_waypoints_ENU[0][0], self.mission_waypoints_ENU[0][1], 2.0, self.yaw)               # x, y, z, yaw
+                    self.setpoint = (self.mission_waypoints_ENU[0][0], self.mission_waypoints_ENU[0][1], 5.0, self.yaw)               # x, y, z, yaw
 
 
                 if self.reached == False and self.sampling_flag_data == 1:
@@ -408,7 +408,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.mission_waypoints_LLA[1][1],\
                                         self.mission_waypoints_LLA[1][2], 60)
                     self.reached = True
-                    self.setpoint = (self.mission_waypoints_ENU[1][0], self.mission_waypoints_ENU[1][1], 2.0, self.yaw)               # x, y, z, yaw
+                    self.setpoint = (self.mission_waypoints_ENU[1][0], self.mission_waypoints_ENU[1][1], 5.0, self.yaw)               # x, y, z, yaw
 
                     
                 if self.reached == False and self.sampling_flag_data == 2:
@@ -417,7 +417,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                                         self.mission_waypoints_LLA[2][1],\
                                         self.mission_waypoints_LLA[2][2], 60)
                     self.reached = True
-                    self.setpoint = (self.mission_waypoints_ENU[2][0], self.mission_waypoints_ENU[2][1], 2.0, self.yaw)               # x, y, z, yaw
+                    self.setpoint = (self.mission_waypoints_ENU[2][0], self.mission_waypoints_ENU[2][1], 5.0, self.yaw)               # x, y, z, yaw
 
 #------------------------------------------------------------------------------
 # Uncomment When using the Aurelia drone with the real sampler node------------       
@@ -469,7 +469,7 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
             rate = rospy.Rate(1)  # Hz
             if self.reached:
                 rospy.loginfo("waypoint reached. flag will change after 30 seconds.")
-                rospy.sleep(30)
+                rospy.sleep(10)
                 self.sampling_flag_data += 1
                 self.reached = False
                 rospy.loginfo(self.sampling_flag_data)
