@@ -167,9 +167,7 @@ void loop() {
     sensor.newFile();
     sensor.start(0);                // start the sensor with the laser off to collect the background
     uint8_t sampleCounter = 0;      // the sample counter will rollover every 256 samples
-    float fluorBackground = 0.0;
-    float refBackground = 0.0;
-    float scatBackground = 0.0;
+
     while (sensor.getMode() == 1) {
       while (!sensor.dataReady()) {}      // wait for data buffer to fill
       sensor.laser(sampleCounter != 255); // turn laser off every 256th sample (on otherwise)
@@ -177,15 +175,9 @@ void loop() {
       #ifdef DEBUG
         Serial.println(F("Getting data"));
       #endif // DEBUG
-      if(sampleCounter != 0){              // every 256th sample we collect a background
-        fluorMsg.data = adc.getData(&fluorescence) - fluorBackground;
-        refMsg.data = adc.getData(&reference) - refBackground;
-        scatMsg.data = adc.getData(&scattering) - scatBackground;
-      }else{                               // the background gets subtracted from every other sample
-        fluorBackground = adc.getData(&fluorescence);
-        refBackground = adc.getData(&reference);
-        scatBackground = adc.getData(&scattering);
-      }
+      fluorMsg.data = adc.getData(&fluorescence);
+      refMsg.data = adc.getData(&reference);
+      scatMsg.data = adc.getData(&scattering);
 
       if(adc.OOR_flag){
         setMsg.data = (100*fluorescence.config.gain) + (10*reference.config.gain) + (scattering.config.gain);
@@ -257,12 +249,34 @@ void loop() {
     for (int i = 0; i < 100; i++) {
         sensor.start();
         while (!sensor.dataReady()) {}
+        if(adc.OOR_flag){
+          setMsg.data = (100*fluorescence.config.gain) + (10*reference.config.gain) + (scattering.config.gain);
+          #ifndef DEBUG
+            setPub.publish(&setMsg);
+          #endif // !DEBUG
+          #ifdef DEBUG
+            Serial.print(F("Autogain: "));
+            Serial.println(setMsg.data);
+          #endif // DEBUG
+          adc.OOR_flag = false; // clear flag
+        } 
         sensor.laser(false);
         blank[i] = adc.getData(&fluorescence);
         laserIntensity += adc.getData(&reference);
 
         sensor.start();
         while (!sensor.dataReady()) {}
+        if(adc.OOR_flag){
+          setMsg.data = (100*fluorescence.config.gain) + (10*reference.config.gain) + (scattering.config.gain);
+          #ifndef DEBUG
+            setPub.publish(&setMsg);
+          #endif // !DEBUG
+          #ifdef DEBUG
+            Serial.print(F("Autogain: "));
+            Serial.println(setMsg.data);
+          #endif // DEBUG
+          adc.OOR_flag = false; // clear flag
+        } 
         sensor.laser(true);
         blank[i] -= adc.getData(&fluorescence);
         bkgdFluor += blank[i];
