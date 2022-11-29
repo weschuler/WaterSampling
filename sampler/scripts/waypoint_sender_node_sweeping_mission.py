@@ -72,8 +72,8 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
         self.mission_end = False
         self.sampling_flag_data = 0
         self.sampling_depth = 0.2
-        self.danger_alt = 0.5
-        self.d = 1.5
+        self.danger_alt = 0.5                                   # Dangerous distance above the water surface.
+        self.d = 20                                            # Maximum interval between two intermediate waypoints
         self.inputs = [0,0,0,0]
         
 #        self.pos_setpoint_pub = rospy.Publisher(
@@ -209,12 +209,29 @@ class MavrosOffboardPosctl(MavrosTestCommonTweaked):                            
                 rate = rospy.Rate(loop_freq)
     
                 for i in xrange(timeout * loop_freq):
-                    if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
-                        rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
-                            k+1,n,i / loop_freq, timeout))
-        
-                        break
-        
+                    
+#    --------------------------Original Block (stops every intermediate wp)---------------------------------------------------------------
+#                    if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
+#                        rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
+#                            k+1,n,i / loop_freq, timeout))
+#        
+#                        break
+#    --------------------------------------------------------------------------------------------------------
+#    
+#    --------------------------Alternate Block (updates intermediate wp after reaching 60%)-----------------------------------------------
+                    if k == n-1:
+                        if self.is_at_position(xx[k], yy[k], target[2,0], self.radius):
+                            rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
+                                k+1,n,i / loop_freq, timeout))
+            
+                            break
+                    elif k != n-1:
+                        if self.is_at_position(xx[k], yy[k], target[2,0], 0.4*self.d):
+                            rospy.loginfo("Intermediate position {0} of {1} reached | seconds: {2} of {3}".format(
+                                k+1,n,i / loop_freq, timeout))
+            
+                            break
+#    --------------------------------------------------------------------------------------------------------       
         
                     try:
                         rate.sleep()

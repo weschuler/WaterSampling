@@ -35,7 +35,7 @@ class PD_Controller_Class(MavrosTestCommonTweaked):
     self.prev_error_q = 0.0
     
     self.inlet_depth = 0.0
-    self.vel_horz_max = 1.0
+    self.vel_horz_max = 5.0
  
   def clip_input(self, value):
     if value >= self.vel_horz_max:
