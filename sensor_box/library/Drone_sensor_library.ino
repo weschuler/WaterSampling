@@ -249,12 +249,34 @@ void loop() {
     for (int i = 0; i < 100; i++) {
         sensor.start();
         while (!sensor.dataReady()) {}
+        if(adc.OOR_flag){
+          setMsg.data = (100*fluorescence.config.gain) + (10*reference.config.gain) + (scattering.config.gain);
+          #ifndef DEBUG
+            setPub.publish(&setMsg);
+          #endif // !DEBUG
+          #ifdef DEBUG
+            Serial.print(F("Autogain: "));
+            Serial.println(setMsg.data);
+          #endif // DEBUG
+          adc.OOR_flag = false; // clear flag
+        } 
         sensor.laser(false);
         blank[i] = adc.getData(&fluorescence);
         laserIntensity += adc.getData(&reference);
 
         sensor.start();
         while (!sensor.dataReady()) {}
+        if(adc.OOR_flag){
+          setMsg.data = (100*fluorescence.config.gain) + (10*reference.config.gain) + (scattering.config.gain);
+          #ifndef DEBUG
+            setPub.publish(&setMsg);
+          #endif // !DEBUG
+          #ifdef DEBUG
+            Serial.print(F("Autogain: "));
+            Serial.println(setMsg.data);
+          #endif // DEBUG
+          adc.OOR_flag = false; // clear flag
+        } 
         sensor.laser(true);
         blank[i] -= adc.getData(&fluorescence);
         bkgdFluor += blank[i];
