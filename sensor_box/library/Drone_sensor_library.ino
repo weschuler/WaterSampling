@@ -1,4 +1,4 @@
-/*
+ /*
   This sketch is for testing and debugging a library of functions for a sensor based on the Arduino Nano BLE sense
 */
 
@@ -31,6 +31,7 @@ ros::Subscriber<std_msgs::Int16> mode("sensor/mode", messageCb );    // Declare 
 std_msgs::Float32 fluorMsg;                                     // Set up data type for fluorescence data message
 std_msgs::Float32 refMsg;                                       // Set up data type for reference data message
 std_msgs::Float32 scatMsg;                                       // Set up data type for scattering data message
+std_msgs::Float32 ramanMsg;                                     // Set up data type for raman data message
 std_msgs::Int16 setMsg;
 std_msgs::Float32 temperature;                                // Set up data type for temp data message
 std_msgs::Float32 humidity;                                   // Set up data type for humidity data message
@@ -41,6 +42,7 @@ std_msgs::Int16 diagnostic;
 ros::Publisher fluorPub("sensor/fluor", &fluorMsg);             // Declare publisher of fluorescence data message on "sensor/fluor" topic
 ros::Publisher refPub("sensor/ref", &refMsg);                   // Declare publisher of reference data message on "sensor/ref" topic
 ros::Publisher scatPub("sensor/scat", &scatMsg);                   // Declare publisher of scattering data message on "sensor/scat" topic
+ros::Publisher ramanPub("sensor/raman", &ramanMsg);                   // Declare publisher of scattering data message on "sensor/scat" topic
 ros::Publisher setPub("sensor/settings", &setMsg);
 ros::Publisher tempPub("sensor/temp", &temperature);                 // Declare publisher of temp data message on "temp" topic
 ros::Publisher humPub("sensor/humidity", &humidity);                 // Declare publisher of humidity data message on "humidity" topic
@@ -67,11 +69,12 @@ void dateTime(uint16_t* date, uint16_t* time, uint8_t* ms10) {
 }
 
 void setup() {
- #ifndef DEBUG
+#ifndef DEBUG
     nh.initNode();                 // Initialize node handle
     nh.advertise(fluorPub);        // Start advertising/publishing on "fluor_data" topic
     nh.advertise(refPub);          // Start advertising/publishing on "ref_data" topic
     nh.advertise(scatPub);          // Start advertising/publishing on "ref_data" topic
+    nh.advertise(ramanPub);
     nh.advertise(setPub);
     nh.advertise(tempPub);         // Start advertising/publishing on "temp" topic
     nh.advertise(humPub);          // Start advertising/publishing on "humidity" topic
@@ -79,7 +82,7 @@ void setup() {
     nh.advertise(calibrationPub);
     nh.advertise(diagnosticPub);
     nh.subscribe(mode);            // Initialize subscriber to messages on "record" topic
-  #endif // !DEBUG
+#endif // !DEBUG
 
   // Set file timestamp callback
   FsDateTime::setCallback(dateTime);
@@ -102,20 +105,20 @@ void setup() {
 
 
 void loop() {
-	switch (sensor.getMode()) {
-  // Idle Mode    
-  case 0: {
-    if (sensor.isActive()) {
-      sensor.shutdown();
+    switch (sensor.getMode()) {
+	// Idle Mode    
+    case 0: {
+ 	if (sensor.isActive()) {
+            sensor.shutdown();
       #ifdef DEBUG
-        Serial.println(F("Shutting down"));
+	Serial.println(F("Shutting down"));
       #endif // DEBUG
     }
     #ifndef DEBUG
-      if (sensor._errorCase) {
-        myErrorMsg.data = sensor.readErrors();
-        errorPub.publish(&myErrorMsg);
-      }
+    if (sensor._errorCase) {
+	myErrorMsg.data = sensor.readErrors();
+	errorPub.publish(&myErrorMsg);
+    }
     #endif // DEBUG
     
     if (millis() > rosTimeout) {
@@ -130,7 +133,7 @@ void loop() {
         nh.spinOnce();
       #endif // !DEBUG
       rosTimeout = millis() + ROS_TIMEOUT_DELAY;
-    }
+    } 
 
     if (millis() > tempTimeout) {    // once per second, the sensor will read new temp and hum values and store them to the SD card
       sensor.getHTS();
@@ -149,7 +152,8 @@ void loop() {
       tempTimeout = millis() + 1000;
     }
     break;
-  }
+  }// end case 0
+	    
   // Record Mode (data)
   case 1: {
     Drone_sensor::ADC<3072> adc;
@@ -218,7 +222,8 @@ void loop() {
     }
     sensor.shutdown();
     break;
-  }
+  } // end case 1
+	    
   // Calibrate (cali)
   case 2: {
     #ifdef DEBUG
@@ -323,7 +328,8 @@ void loop() {
     sensor.shutdown();
     sensor.setMode(0);
     break;
-  }
+  } // end case 2
+	    
   // Laser On
   case 3: {
     sensor.laser(true);
@@ -336,64 +342,63 @@ void loop() {
     sensor.setMode(0);
     break; 
   } 
-  // All detectors full buffer write (adcb)
-  case 14: {
+// disable modes 14 and 15
+	    
+// Record Mode for remote sensor (data)
+case 10: {
     Drone_sensor::ADC<3072> adc;
     adc.enableChannel(&fluorescence);
-    adc.enableChannel(&reference);
-    adc.enableChannel(&scattering);
+    adc.enableChannel(&raman);
     sensor.initADC(&adc);
 
     #ifdef DEBUG
       Serial.print(adc._numChannels);
-      Serial.println(F("channels enabled"));
-      Serial.print(fluorescence.uVperLSB);
-      Serial.println(F(" uV/LSB (fluorescence)"));
-      Serial.print(reference.uVperLSB);
-      Serial.println(F(" uV/LSB (reference)"));
+      Serial.println(F(" channels enabled"));
       Serial.println(F("Creating new file"));
     #endif // DEBUG
 
     sensor.newFile();
-    sensor.start();                 // laser is on
-    while (sensor.getMode() == 14) {
-      while (!sensor.dataReady()) {}  // wait for data buffer to fill
-      sensor.laser(false);            // turn off laser
+    sensor.start(0);                // start the sensor with the laser off to collect the background
+    uint8_t sampleCounter = 0;      // the sample counter will rollover every 256 samples
+
+    while (sensor.getMode() == 10) {
+      while (!sensor.dataReady()) {}      // wait for data buffer to fill
+      sensor.laser(sampleCounter != 255); // turn laser off every 256th sample (on otherwise)
 
       #ifdef DEBUG
-        Serial.println(F("Getting on data"));
+        Serial.println(F("Getting data"));
       #endif // DEBUG
       fluorMsg.data = adc.getData(&fluorescence);
-      refMsg.data = adc.getData(&reference);
-      adc.getData(&scattering);
+      ramanMsg.data = adc.getData(&raman);
 
+      if(adc.OOR_flag){
+        setMsg.data = (100*fluorescence.config.gain) + (10*raman.config.gain);
+        #ifndef DEBUG
+          setPub.publish(&setMsg);
+        #endif // !DEBUG
+        #ifdef DEBUG
+          Serial.print(F("Autogain: "));
+          Serial.println(setMsg.data);
+        #endif // DEBUG
+        adc.OOR_flag = false; // clear flag
+      }
+
+      sampleCounter++;                // increment sample counter
       sensor.start();                 // start next collection
-      sensor.writeFile(adc);
-          
-      while (!sensor.dataReady()) {}  // wait for data buffer to fill
-      sensor.laser(true);             // turn on laser
-
-      #ifdef DEBUG
-        Serial.println(F("Getting off data"));
-      #endif // DEBUG
-      fluorMsg.data -= adc.getData(&fluorescence);
-      refMsg.data -= adc.getData(&reference);
-      adc.getData(&scattering);
-
-      sensor.start();                 // start next collection
-      sensor.writeFile(adc);
-
+      sensor.writeFile(fluorescence); // write data to SD card
+      sensor.writeFile(raman);
+      
       #ifndef DEBUG
         fluorPub.publish(&fluorMsg);    // publish fluor on the "fluor_data" ROS topic
-        refPub.publish(&refMsg);        // publish ref on the "ref_data" ROS topic
+        ramanPub.publish(&ramanMsg);        // publish ref on the "ref_data" ROS topic
         nh.spinOnce();                  // update ROS
       #endif // !DEBUG
 
       #ifdef DEBUG
+        Serial.print("Data:\t");
         Serial.print(fluorMsg.data);
         Serial.print("\t");
-        Serial.println(refMsg.data);
-
+        Serial.print(ramanMsg.data);
         if (Serial.available()) {
             sensor.setMode(Serial.parseInt());
         }
@@ -401,102 +406,25 @@ void loop() {
     }
     sensor.shutdown();
     break;
-  }
-  // All detectors continuous(frsc)
-  case 15: {
-    Drone_sensor::ADC<3072> adc;
-    adc.enableChannel(&fluorescence);
-    adc.enableChannel(&reference);
-    adc.enableChannel(&scattering);
-    sensor.initADC(&adc);
-
-    #ifdef DEBUG
-      Serial.print(adc._numChannels);
-      Serial.println(F("channels enabled"));
-      Serial.print(fluorescence.uVperLSB);
-      Serial.println(F(" uV/LSB (fluorescence)"));
-      Serial.print(reference.uVperLSB);
-      Serial.println(F(" uV/LSB (reference)"));
-      Serial.print(scattering.uVperLSB);
-      Serial.println(F(" uV/LSB (scattering)"));
-      Serial.print(scattering.index);
-      Serial.println(F(" (scattering channel index)"));
-      delay(1000);
-      Serial.println(F("Creating new file"));
-    #endif // DEBUG
-
-    sensor.newFile();
-    sensor.start(false);            // start with laser off
-    while (!sensor.dataReady()) {}  // wait for data buffer to fill
-    #ifdef DEBUG
-      Serial.println(F("Getting background data"));
-    #endif // DEBUG
-    
-    fluorMsg.data = adc.getData(&fluorescence);
-    refMsg.data = adc.getData(&reference);
-    scatMsg.data = adc.getData(&scattering);
-
-    sensor.laser(true);             // turn on laser
-    sensor.writeFile(fluorescence); // write data to SD card
-    sensor.writeFile(reference);
-    sensor.writeFile(scattering);
-    
-    sensor.start();                 // start next collection
-
-    while (sensor.getMode() == 15) {          
-      while (!sensor.dataReady()) {}  // wait for data buffer to fill
-      #ifdef DEBUG
-        Serial.println(F("Getting data"));
-      #endif // DEBUG
-    
-      fluorMsg.data = adc.getData(&fluorescence);
-      refMsg.data = adc.getData(&reference);
-      scatMsg.data = adc.getData(&scattering);
-
-      sensor.start();                 // start next collection
-      sensor.writeFile(fluorescence); // write data to SD card
-      sensor.writeFile(reference);
-      sensor.writeFile(scattering);
-
-      #ifndef DEBUG
-        fluorPub.publish(&fluorMsg);    // publish fluor on the "fluor_data" ROS topic
-        refPub.publish(&refMsg);        // publish ref on the "ref_data" ROS topic
-        scatPub.publish(&scatMsg);      // publish scat on the "sensor/scat" ROS topic
-        nh.spinOnce();                  // update ROS
-      #endif // !DEBUG
-
-      #ifdef DEBUG
-        Serial.print(fluorMsg.data);
-        Serial.print("\t");
-        Serial.println(refMsg.data);
-        Serial.print("\t");
-        Serial.println(scatMsg.data);
-
-        if (Serial.available()) {
-          sensor.setMode(Serial.parseInt());
-        }
-      #endif // DEBUG
-    }
-    sensor.shutdown();
-    break;
-  }
+  } // end case 10
   default: {
     sensor.setMode(0);
     break;
   }
-	}
-  #ifdef DEBUG
+} // end switch
+	
+    #ifdef DEBUG
     if (Serial.available()) {
-      sensor.setMode(Serial.parseInt());
+        sensor.setMode(Serial.parseInt());
     }
-  #endif // DEBUG
-  #ifndef DEBUG
+    #endif // DEBUG
+    #ifndef DEBUG
     if (millis() > rosTimeout) {
-      nh.spinOnce();
-      rosTimeout = millis() + ROS_TIMEOUT_DELAY;
+	nh.spinOnce();
+	rosTimeout = millis() + ROS_TIMEOUT_DELAY;
     }
-  #endif // !DEBUG
-}
+    #endif // !DEBUG
+} // end loop
 
 /* callback for microphone */
 void onPDMdata() {
