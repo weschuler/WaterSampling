@@ -19,6 +19,8 @@ Drone_sensor sensor;        // set up sensor with 10 Hz report freq
 Drone_sensor::ADC_channel<128> fluorescence(8, NRF_SAADC_INPUT_AIN2); // create fluorescence channel object with 128 result buffer, oversample = 8, on pin AIN2
 Drone_sensor::ADC_channel<128> reference(8, NRF_SAADC_INPUT_AIN6); // reference channel object
 Drone_sensor::ADC_channel<128> scattering(8, NRF_SAADC_INPUT_AIN5); // scattering channel object
+Drone_sensor::ADC_channel<128> raman(8, NRF_SAADC_INPUT_AIN6); // raman channel
+Drone_sensor::ADC_channel<128> pe(8, NRF_SAADC_INPUT_AIN5); // phycoerythrin channel
 
 ros::NodeHandle nh;               // create node handle object for ROS
 
