@@ -34,7 +34,7 @@ std_msgs::Float32 fluorMsg;                                     // Set up data t
 std_msgs::Float32 refMsg;                                       // Set up data type for reference data message
 std_msgs::Float32 scatMsg;                                       // Set up data type for scattering data message
 std_msgs::Float32 ramanMsg;                                     // Set up data type for raman data message
-std_msgs::Int16 setMsg;
+std_msgs::Int16 setMsg;						
 std_msgs::Float32 temperature;                                // Set up data type for temp data message
 std_msgs::Float32 humidity;                                   // Set up data type for humidity data message
 std_msgs::String myErrorMsg;                                       // Set up error message
@@ -45,15 +45,15 @@ ros::Publisher fluorPub("sensor/fluor", &fluorMsg);             // Declare publi
 ros::Publisher refPub("sensor/ref", &refMsg);                   // Declare publisher of reference data message on "sensor/ref" topic
 ros::Publisher scatPub("sensor/scat", &scatMsg);                   // Declare publisher of scattering data message on "sensor/scat" topic
 ros::Publisher ramanPub("sensor/raman", &ramanMsg);                   // Declare publisher of scattering data message on "sensor/scat" topic
-ros::Publisher setPub("sensor/settings", &setMsg);
+ros::Publisher setPub("sensor/settings", &setMsg);			// Set up publisher of set topic WSchuler
 ros::Publisher tempPub("sensor/temp", &temperature);                 // Declare publisher of temp data message on "temp" topic
 ros::Publisher humPub("sensor/humidity", &humidity);                 // Declare publisher of humidity data message on "humidity" topic
 ros::Publisher errorPub("sensor/error", &myErrorMsg);                     // Set up publisher of error topic
-ros::Publisher calibrationPub("sensor/calibration", &calibrationMsg);
-ros::Publisher diagnosticPub("sensor/diagnostic", &diagnostic);
+ros::Publisher calibrationPub("sensor/calibration", &calibrationMsg);	//Set up publisher of calibration topic WSchuler
+ros::Publisher diagnosticPub("sensor/diagnostic", &diagnostic);		// Set up publisher of diagnostic topic WSchuler
 
-unsigned long rosTimeout = ROS_TIMEOUT_DELAY;
-unsigned long tempTimeout = 1000;
+unsigned long rosTimeout = ROS_TIMEOUT_DELAY;				// Store ROS timeout delay data in positive intergers WSchuler
+unsigned long tempTimeout = 1000;					// Store temperature timeout data in positive intergers WSchuler 
 
 //------------------------------------------------------------------------------
 // Call back for file timestamps.  Only called for file create and sync().
@@ -76,15 +76,15 @@ void setup() {
     nh.advertise(fluorPub);        // Start advertising/publishing on "fluor_data" topic
     nh.advertise(refPub);          // Start advertising/publishing on "ref_data" topic
     nh.advertise(scatPub);          // Start advertising/publishing on "ref_data" topic
-    nh.advertise(ramanPub);
-    nh.advertise(setPub);
+    nh.advertise(ramanPub);	    // Start advertising/publishing on "sensor/scat" topic WSchuler
+    nh.advertise(setPub);	    // Start advertising/publishing on set topic WSchuler
     nh.advertise(tempPub);         // Start advertising/publishing on "temp" topic
     nh.advertise(humPub);          // Start advertising/publishing on "humidity" topic
     nh.advertise(errorPub);        // Advertise error topic
-    nh.advertise(calibrationPub);
-    nh.advertise(diagnosticPub);
+    nh.advertise(calibrationPub);	 // Start advertising/publishing on calibration topic WSchuler
+    nh.advertise(diagnosticPub);      // Start advertising/publishing on diagnostic topic WSchuler
     nh.subscribe(mode);            // Initialize subscriber to messages on "record" topic
-#endif // !DEBUG
+#endif 	// !DEBUG			
 
   // Set file timestamp callback
   FsDateTime::setCallback(dateTime);
@@ -95,9 +95,9 @@ void setup() {
   #endif // DEBUG
 
 	if (sensor.init()) { // initialize sensor
-    sensor.setMode(2);
+    sensor.setMode(2);	     // Set the mode of the sensor to ? WSChuler
     #ifdef DEBUG
-        Serial.println("Sensor.init success");
+        Serial.println("Sensor.init success");	
       }
       else {
         Serial.println("Sensor.init failed");
@@ -137,7 +137,7 @@ void loop() {
       rosTimeout = millis() + ROS_TIMEOUT_DELAY;
     } 
 
-    if (millis() > tempTimeout) {    // once per second, the sensor will read new temp and hum values and store them to the SD card
+    if (millis() > tempTimeout) {    // once per second, the sensor will read new temp and humidity values and store them to the SD card
       sensor.getHTS();
       temperature.data = sensor.HTSdata.temperature;
       humidity.data = sensor.HTSdata.humidity;
